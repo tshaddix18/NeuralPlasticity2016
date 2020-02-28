@@ -1,7 +1,14 @@
 """
 tripartite_figures.py
 
-Generate figures and simulations for DePitta.NP2016 paper.
+Generate Figures and simulations for the paper
+
+De Pitta and Brunel, "Modulation of synaptic plasticity by glutamatergic gliotransmission: A model study. Neural Plasticity, 2016: 7607924
+
+v2.0 Maurizio De Pitta, Basque Center for Mathematics, 2020
+Translated and Debugged to run in Python 3.x
+
+v1.0 Maurizio De Pitta, The University of Chicago, 2015
 """
 from brian2 import *
 from brian2.units.allunits import mole, umole, mmole
@@ -16,14 +23,11 @@ import astrocyte_models as asmod
 import analysis
 import figures_template as figtem
 import graupner_model as camod
-
-import os, sys
-sys.path.append(os.path.join(os.path.expanduser('~'), 'Dropbox/Ongoing.Projects/pycustommodules'))
 import brian_utils as bu
 import save_utils as svu
-import general_utils as gu
 
 import geometry as geom
+import sympy
 
 import numpy.random as random
 import matplotlib
@@ -36,7 +40,7 @@ from scipy.signal import argrelmax
 
 def save_figures(label='tmp', filename=['figure'], format='svg', dpi=600):
     '''
-    General routine to save multiple figures with personalized names within each simulation
+    General routine to save multiple Figures with personalized names within each simulation
     :param label:
     :param filename:
     :param format:
@@ -91,7 +95,7 @@ def plotyy(x, y1, y2, y3=None,
     ax_aux.spines['right'].set_position(('outward', spine_position))  # outward by 10 points
 
     # Plot y3 (optional)
-    if y3 != None:
+    if y3 is not None:
         ax_aux = [ax_aux, ax.twinx()]
         ax_aux[1].plot(x, y3, ls=ls, lw=lw, color=colors['y3'])
         ax_aux[1].spines['right'].set_position(('axes', spine_position_y3))  # outward by fraction of the x-axis
@@ -114,7 +118,7 @@ def set_axlw(ax, lw=1.0):
     '''
     Adjust axis line width
     '''
-    for axis in ax.spines.keys():
+    for axis in list(ax.spines.keys()):
         ax.spines[axis].set_linewidth(lw)
 
 def set_axfs(ax, fs=14):
@@ -132,7 +136,7 @@ peak_normalize = lambda peak, taur, taud : peak*(1./taud - 1./taur)/( (taur/taud
 #-----------------------------------------------------------------------------------------------------------------------
 # Figure 1
 #-----------------------------------------------------------------------------------------------------------------------
-def tripartite_syn(sim=False, syn_type='depressing', format='eps', dir='./'):
+def tripartite_syn(sim=False, syn_type='depressing', format='eps', data_dir='../data/', fig_dir='../Figures/'):
     '''
     Show I/O characteristics in terms of released neurotransmitter resources of a synapse w/out w/ gliotransmission
     '''
@@ -208,12 +212,12 @@ def tripartite_syn(sim=False, syn_type='depressing', format='eps', dir='./'):
         A2_mon = bu.monitor_to_dict(A2)
         G_mon = bu.monitor_to_dict(G)
 
-        svu.savedata([S_mon,A0_mon,A1_mon,A2_mon,G_mon],'io_syn_'+syn_type[:3]+'.pkl')
+        svu.savedata([S_mon,A0_mon,A1_mon,A2_mon,G_mon],data_dir+'io_syn_'+syn_type[:3]+'.pkl')
 
     #-------------------------------------------------------------------------------------------------------------------
-    # Building figures
+    # Building Figures
     #-------------------------------------------------------------------------------------------------------------------
-    [S,A0,A1,A2,G] = svu.loaddata('io_syn_'+syn_type[:3]+'.pkl')
+    [S,A0,A1,A2,G] = svu.loaddata(data_dir+'io_syn_'+syn_type[:3]+'.pkl')
 
     plt.close('all')
     #-------------------------------------------------------------------------------------------------------------------
@@ -394,20 +398,20 @@ def tripartite_syn(sim=False, syn_type='depressing', format='eps', dir='./'):
     set_axlw(ax[2], lw=alw)
     set_axfs(ax[2], fs=afs)
 
-    # Save figures
+    # Save Figures
     plt.figure(1)
     # plt.savefig('io_syn.svg', format='svg', dpi=600)
-    plt.savefig(dir+'fig1_io_syn.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig1_io_syn.'+format, format=format, dpi=600)
     # plt.close(fig0)
 
     plt.figure(2)
     # plt.savefig('io_ast.svg', format='svg', dpi=600)
-    plt.savefig(dir+'fig1_io_ast.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig1_io_ast.'+format, format=format, dpi=600)
     # plt.close(fig1)
 
     plt.figure(3)
     # plt.savefig('io_glt.svg', format='svg', dpi=600)
-    plt.savefig(dir+'fig1_io_glt.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig1_io_glt.'+format, format=format, dpi=600)
     # plt.close(fig2)
 
     plt.show()
@@ -426,7 +430,7 @@ def synapse_io(format='svg', dir='../Figures/'):
     lfs = 16
 
     #-------------------------------------------------------------------------------------------------------------------
-    # Building figures
+    # Building Figures
     #-------------------------------------------------------------------------------------------------------------------
     syn_type = ['dep','fac']
     [Sd,_,_,_,_] = svu.loaddata('io_syn_dep.pkl')
@@ -520,15 +524,15 @@ def synapse_io(format='svg', dir='../Figures/'):
 
     plt.show()
 
-def tripartite_io(sim=True, format='svg', dir='../Figures/'):
-# def tripartite_io(sim=False, format='svg', dir='../Figures/'):
-#     tripartite_syn(sim=sim, format=format, dir=dir)
-    synapse_io(format=format, dir=dir)
+def tripartite_io(sim=True, format='svg', fig_dir='../Figures/'):
+# def tripartite_io(sim=False, format='svg', fig_dir='../Figures/'):
+    tripartite_syn(sim=sim, format=format, fig_dir=fig_dir)
+    # synapse_io(format=format, fig_dir=fig_dir)
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Figure 2
 #-----------------------------------------------------------------------------------------------------------------------
-def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
+def stp_regulation(sim=False, synapse='facilitating', format='eps', data_dir='../data/', fig_dir='../Figures/'):
 # def stp_regulation(sim=False,synapse='depressing', format='eps'):
     '''
     Build figure considering the presynaptic effect
@@ -560,15 +564,17 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
     params['O_G'] = 0.6/umole/second
     params['Omega_G'] = 1.0/(30*second)
     params['t_off'] = 21*second
+    params['G_e'] = 3*mV
 
     # Add synaptic weight conversion to interface with postsynaptic LIF
-    params['we'] = (60*0.27/10)*mV / (params['rho_c']*params['Y_T']) # excitatory synaptic weight (voltage)
+    # params['we'] = (60*0.27/10)*mV / (params['rho_c']*params['Y_T']) # excitatory synaptic weight (voltage)
+    params['we'] = (60*0.27/10) / (params['rho_c']*params['Y_T'])
 
     # General parameters for simulation also used in the analysis
-    duration = 90*second
+    duration = 90
 
-    # Stimulation (used in figures too)
-    offset = 0.2
+    # Stimulation (used in Figures too)
+    offset = 0.05
     isi = 0.1
     stim = offset+arange(0.0,duration,2.0)
     spikes = sort(concatenate((stim, stim+isi)))*second
@@ -580,6 +586,9 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
                                                                  post=True,
                                                                  stimulus='test',
                                                                  spikes=spikes)
+        # Postysnaptic neuron settings
+        target_group.v = params['E_L']
+        # Synapses' settings
         synapses.alpha = alpha
 
         # Gliotransmitter release
@@ -590,12 +599,12 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
         ecs = asmod.extracellular_astro_to_syn(gliot, synapses, params, connect=True)
 
         # Set monitors
-        pre = StateMonitor(synapses, ['Gamma_S'], record=True, dt=0.02*second)
-        post = StateMonitor(target_group, ['g'], record=True)
+        pre = StateMonitor(synapses, ['Gamma_S','ge'], record=True, dt=0.02*second)
+        post = StateMonitor(target_group, ['v'], record=True)
         glt = StateMonitor(gliot, ['G_A'], record=True, dt=0.02*second)
 
         # Run
-        run(duration,namespace={},report='text')
+        run(duration*second,namespace={},report='text')
 
         # Convert monitors to dictionaries and save them for analysis
         pre_mon = bu.monitor_to_dict(pre)
@@ -603,18 +612,18 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
         glt_mon = bu.monitor_to_dict(glt)
 
         # Save data
-        svu.savedata([pre_mon,post_mon,glt_mon],dir+'stp_regulation_'+synapse[:3]+'.pkl')
+        svu.savedata([pre_mon,post_mon,glt_mon],data_dir+'stp_regulation_'+synapse[:3]+'.pkl')
 
     #-------------------------------------------------------------------------------------------------------------------
     # Data Analysis
     #-------------------------------------------------------------------------------------------------------------------
     # Load data
-    [pre,post,glt] = svu.loaddata('stp_regulation_'+synapse[:3]+'.pkl')
+    [pre,post,glt] = svu.loaddata(data_dir+'stp_regulation_'+synapse[:3]+'.pkl')
 
     # Define some lambdas
     u0_sol = lambda gamma_S, u0_star, xi : (1.0-gamma_S)*u0_star + xi*gamma_S
 
-    # Generate Figures
+    # # Generate Figures
     fig1, ax = figtem.generate_figure('2x1',figsize=(6.0,5.5),left=0.18,bottom=0.15,right=0.05,top=0.08)
     tlims = [0.0, duration]
 
@@ -668,10 +677,11 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
 
     # Plot PPR(t)
     # First retrieve PSC peaks
-    i0 = sg.argrelextrema(post['g'][0], np.greater)[0]
-    i1 = sg.argrelextrema(post['g'][1], np.greater)[0]
-    peaks_0 = post['g'][0][i0]
-    peaks_1 = post['g'][1][i1]
+    post['v'] -= params['E_L']/volt
+    i0 = sg.argrelextrema(post['v'][0], np.greater)[0]
+    i1 = sg.argrelextrema(post['v'][1], np.greater)[0]
+    peaks_0 = post['v'][0][i0]
+    peaks_1 = post['v'][1][i1]
 
     # Compute PPRs
     ppr_ref = peaks_0[1]/peaks_0[0]
@@ -704,14 +714,14 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
     indices = where((post['t']>offset-0.02) & (post['t']<offset+isi+0.05))
     time_ref = post['t'][indices] * 1e3  # convert to ms
     time_ref -= time_ref[0]
-    psc_ref = post['g'][0][indices]
+    psc_ref = post['v'][0][indices]
     psc_ref /= R_soma * cf
 
     t_off = 10.0
     indices = where((post['t'] >= offset-0.02+t_off) & (post['t']< offset+isi+0.05+t_off))
     time_mod = post['t'][indices] * 1e3  # convert to ms
     time_mod -= time_mod[0]
-    psc_0 = post['g'][0][indices]
+    psc_0 = post['v'][0][indices]
     psc_0 /= R_soma * cf
 
     tlims = [0.0,150]
@@ -729,22 +739,21 @@ def stp_regulation(sim=False, synapse='facilitating', format='eps', dir='./'):
     set_axlw(ax[2], lw=alw)
     set_axfs(ax[2], fs=afs)
 
-    # Save figures
+    # Save Figures
     plt.figure(1)
-    plt.savefig(dir+'fig2_stpreg_glt.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig2_stpreg_glt.'+format, format=format, dpi=600)
     # plt.close(fig0)
 
     plt.figure(2)
-    plt.savefig(dir+'fig2_stpreg_rel_'+synapse[:3]+'.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig2_stpreg_rel_'+synapse[:3]+'.'+format, format=format, dpi=600)
     # plt.close(fig1)
 
     plt.show()
 
 # LECTURE friendly
-def regulation_check(sim=False, synapse='facilitating', format='eps', dir='./'):
-# def stp_regulation(sim=False,synapse='depressing', format='eps'):
+def regulation_check(sim=False, synapse='facilitating', format='eps', data_dir='../data/', fig_dir='../Figures/'):
     '''
-    Build figure considering the presynaptic effect
+    Build figure considering the presynaptic effect -- Lecture Friendly
     '''
 
     # Plotting defaults
@@ -780,7 +789,7 @@ def regulation_check(sim=False, synapse='facilitating', format='eps', dir='./'):
     # Add synaptic weight conversion to interface with postsynaptic LIF
     params['we'] = (60*0.27/10)*mV / (params['rho_c']*params['Y_T']) # excitatory synaptic weight (voltage)
 
-    # Stimulation (used in figures too)
+    # Stimulation (used in Figures too)
     # offset = 0.2
     # isi = 0.1
     # stim = offset+arange(0.0,duration,2.0)
@@ -790,11 +799,12 @@ def regulation_check(sim=False, synapse='facilitating', format='eps', dir='./'):
     N_syn = 50
     # spikes = spg.spk_poisson(T=duration/second, N=1, rate=f_in, trp=params['tau_r']/second)[0]*second
 
+    # Lecture version
     if sim :
         keys = ['ctrl','glt']
         # keys = ['glt','ctrl']
         P, G = {}, {}
-        for i in xrange(size(alpha)):
+        for i in range(size(alpha)):
         # for i in xrange(1):
             # N_syn and repeat for two xi values
             source_group,target_group,synapses = asmod.synapse_model(params, N_syn=N_syn, connect='i==j',
@@ -813,39 +823,35 @@ def regulation_check(sim=False, synapse='facilitating', format='eps', dir='./'):
             ecs = asmod.extracellular_astro_to_syn(gliot, synapses, params, connect=True)
 
             # Set monitors
-            # pre = StateMonitor(synapses, ['Gamma_S'], record=True, dt=0.02*second)
             post = StateMonitor(target_group, ['g_e'], record=True, dt=2*ms)
-            # glt = StateMonitor(gliot, ['G_A'], record=True, dt=0.02*second)
 
             # Run
             run(duration,namespace={},report='text')
 
             # Convert monitors to dictionaries and save them for analysis
-            # pre_mon = bu.monitor_to_dict(pre)
             P[keys[i]] = bu.monitor_to_dict(post)
-            # G[keys[i]] = bu.monitor_to_dict(glt)
 
         # Save data
-        svu.savedata([P],dir+'consistency_check_'+synapse[:3]+'.pkl')
-        # svu.savedata([G,P],dir+'consistency_check_'+synapse[:3]+'.pkl')
+        # svu.savedata([P],data_dir+'consistency_check_'+synapse[:3]+'.pkl')
+        # svu.savedata([G,P],data_dir+'consistency_check_'+synapse[:3]+'.pkl')
 
     #-------------------------------------------------------------------------------------------------------------------
     # Data Analysis
     #-------------------------------------------------------------------------------------------------------------------
     # Load data
-    # P = svu.loaddata(dir+'consistency_check_'+synapse[:3]+'.pkl')[0]
-    # G,P = svu.loaddata(dir+'consistency_check_'+synapse[:3]+'.pkl')
+    P = svu.loaddata(data_dir+'consistency_check_'+synapse[:3]+'.pkl')[0]
+    G,P = svu.loaddata(data_dir+'consistency_check_'+synapse[:3]+'.pkl')
 
-    # cf = .9
-    # before = cf*mean(ravel(P['ctrl']['g_e'])[argrelmax(ravel(P['ctrl']['g_e']))[0]])
-    # psc = ravel(P['ctrl']['g_e'])
-    # argpeaks = argrelmax(ravel(P['ctrl']['g_e']))[0]
-    # nbins = 4
-    # bins = r_[arange(0,size(P['glt']['t']),size(P['glt']['t'])/nbins),size(P['glt']['t'])]
-    # m,s = [0]*nbins,[0]*nbins
-    # for i in xrange(0,size(bins)-1):
-    #     m[i] = mean(psc[argpeaks[((argpeaks>=bins[i])&(argpeaks<bins[i+1]))]])/before*100
-    #     s[i] = std(psc[argpeaks[((argpeaks>=bins[i])&(argpeaks<bins[i+1]))]])/before*100
+    cf = .9
+    before = cf*mean(ravel(P['ctrl']['g_e'])[argrelmax(ravel(P['ctrl']['g_e']))[0]])
+    psc = ravel(P['ctrl']['g_e'])
+    argpeaks = argrelmax(ravel(P['ctrl']['g_e']))[0]
+    nbins = 4
+    bins = r_[arange(0,size(P['glt']['t']),size(P['glt']['t'])/nbins),size(P['glt']['t'])]
+    m,s = [0]*nbins,[0]*nbins
+    for i in range(0,size(bins)-1):
+        m[i] = mean(psc[argpeaks[((argpeaks>=bins[i])&(argpeaks<bins[i+1]))]])/before*100
+        s[i] = std(psc[argpeaks[((argpeaks>=bins[i])&(argpeaks<bins[i+1]))]])/before*100
 
     # Fake consistency check
     nbins = 5
@@ -896,124 +902,16 @@ def regulation_check(sim=False, synapse='facilitating', format='eps', dir='./'):
     set_axlw(ax[0], lw=alw)
     set_axfs(ax[0], fs=afs)
 
-    # Save figures
+    # Save Figures
     plt.figure(1)
-    plt.savefig(dir+'cons_check_Fiacco.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'cons_check_Fiacco.'+format, format=format, dpi=600)
     # plt.close(fig0)
 
     plt.figure(2)
-    plt.savefig(dir+'cons_check_Jourdain.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'cons_check_Jourdain.'+format, format=format, dpi=600)
     # plt.close(fig1)
 
-
-    #
-    # # Plot Gamma_S (presynaptic receptors)
-    # ax[1].plot(pre['t'], pre['Gamma_S'][0], color='k', linewidth=lw)
-    # figtem.adjust_spines(ax[1], ['left','bottom'], position=spine_position)
-    # ax[1].set_xlim(tlims)
-    # ax[1].set_xticks(arange(0.0,91.0,30.0))
-    # ax[1].set_xlabel('Time (${0}$)'.format(sympy.latex(second)), fontsize=lfs)
-    # ax[1].set_ylim([-0.01,1.01])
-    # ax[1].set_yticks([0.0,0.5,1.0])
-    # # ax[1].set_ylabel('$\gamma_S$', fontsize=lfs)
-    # ax[1].set_ylabel('Bound\nPresyn. Rec.', fontsize=lfs, multialignment='center')
-    # ax[1].yaxis.set_label_coords(-0.1,0.5)
-    # # Adjust labels
-    # set_axlw(ax[1], lw=alw)
-    # set_axfs(ax[1], fs=afs)
-    #
-    # fig2, ax = figtem.generate_figure('2x1_1L2S',figsize=(6.0,5.5),left=0.18,bottom=0.15,right=0.05,top=0.08,vs=[0.15],hs=[0.15])
-    # # Plot U_0
-    # ax[0].plot(pre['t'], u0_sol(pre['Gamma_S'][0],params['U_0__star'],alpha[0]), color=color[synapse], linewidth=lw)
-    # ax[0].plot(pre['t'], u0_sol(pre['Gamma_S'][1],params['U_0__star'],alpha[1]), color=color['intermediate'], linewidth=lw)
-    # ax[0].plot(tlims, params['U_0__star']*ones((2,1)), ls='--', color='k', linewidth=lw)
-    # figtem.adjust_spines(ax[0], ['left', 'bottom'], position=spine_position)
-    # ax[0].set_xlim(tlims)
-    # ax[0].set_xticks(arange(0.0,91.0,30.0))
-    # ax[0].set_xlabel('Time (${0}$)'.format(sympy.latex(second)), fontsize=lfs)
-    # ax[0].set_ylim([-0.01,1.01])
-    # ax[0].set_yticks([0.0,0.5,1.0])
-    # # ax[0].set_ylabel('$U_0$', fontsize=lfs)
-    # ax[0].set_ylabel('Synaptic\n Release Pr.', fontsize=lfs, multialignment='center')
-    # ax[0].yaxis.set_label_coords(-0.10,0.5)
-    # # Adjust labels
-    # set_axlw(ax[0], lw=alw)
-    # set_axfs(ax[0], fs=afs)
-    #
-    # # Plot PPR(t)
-    # # First retrieve PSC peaks
-    # i0 = sg.argrelextrema(post['g'][0], np.greater)[0]
-    # i1 = sg.argrelextrema(post['g'][1], np.greater)[0]
-    # peaks_0 = post['g'][0][i0]
-    # peaks_1 = post['g'][1][i1]
-    #
-    # # Compute PPRs
-    # ppr_ref = peaks_0[1]/peaks_0[0]
-    # ppr_0 = (peaks_0[1::2]/peaks_0[::2])/ppr_ref*100
-    # ppr_1 = (peaks_1[1::2]/peaks_1[::2])/ppr_ref*100
-    #
-    # # Effective plotting
-    # time = post['t'][i0[1::2]]
-    # ax[1].plot(time, ppr_0, color=color[synapse], linewidth=lw, ls='none', marker='o')
-    # ax[1].plot(time, ppr_1-2.5, color=color['intermediate'], linewidth=lw, ls='none', marker='o')
-    # figtem.adjust_spines(ax[1], ['left', 'bottom'], position=spine_position)
-    # ax[1].set_xlim(tlims)
-    # ax[1].set_xticks(arange(0.0,91.0,30.0))
-    # ax[1].set_xlabel('Time (${0}$)'.format(sympy.latex(second)), fontsize=lfs)
-    # if synapse=='facilitating':
-    #     ax[1].set_ylim([0.0,125])
-    #     ax[1].set_yticks(arange(0.0,121,20))
-    # else:
-    #     ax[1].set_ylim([79,250])
-    #     ax[1].set_yticks(arange(100,251,50))
-    # ax[1].set_ylabel('PPR (%PPR$_0$)', fontsize=lfs)
-    # ax[1].yaxis.set_tick_params(labelsize=afs)
-    # # Adjust labels
-    # set_axlw(ax[1], lw=alw)
-    # set_axfs(ax[1], fs=afs)
-    #
-    # # Plot PSC
-    # R_soma = 60 * Mohm
-    # cf = 1*pamp / amp
-    # indices = where((post['t']>offset-0.02) & (post['t']<offset+isi+0.05))
-    # time_ref = post['t'][indices] * 1e3  # convert to ms
-    # time_ref -= time_ref[0]
-    # psc_ref = post['g'][0][indices]
-    # psc_ref /= R_soma * cf
-    #
-    # t_off = 10.0
-    # indices = where((post['t'] >= offset-0.02+t_off) & (post['t']< offset+isi+0.05+t_off))
-    # time_mod = post['t'][indices] * 1e3  # convert to ms
-    # time_mod -= time_mod[0]
-    # psc_0 = post['g'][0][indices]
-    # psc_0 /= R_soma * cf
-    #
-    # tlims = [0.0,150]
-    # ax[2].plot(time_ref+5, -psc_ref, color='k', linewidth=lw)
-    # ax[2].plot(time_mod, -psc_0, color=color[synapse], linewidth=lw, ls='-')
-    # figtem.adjust_spines(ax[2], ['left', 'bottom'], position=spine_position)
-    # ax[2].set_xlim(tlims)
-    # ax[2].set_xticks(arange(0.0,151,50))
-    # ax[2].set_xlabel('Time (${0}$)'.format(sympy.latex(ms)), fontsize=lfs)
-    # ax[2].set_ylim([-31,0.1])
-    # ax[2].set_yticks(arange(-30,0.1,10))
-    # ax[2].set_ylabel('PSC (pA)', fontsize=lfs)
-    # ax[2].yaxis.set_tick_params(labelsize=afs)
-    # # Adjust labels
-    # set_axlw(ax[2], lw=alw)
-    # set_axfs(ax[2], fs=afs)
-    #
-    # # Save figures
-    # plt.figure(1)
-    # plt.savefig(dir+'fig2_stpreg_glt.'+format, format=format, dpi=600)
-    # # plt.close(fig0)
-    #
-    # plt.figure(2)
-    # plt.savefig(dir+'fig2_stpreg_rel_'+synapse[:3]+'.'+format, format=format, dpi=600)
-    # # plt.close(fig1)
-    #
     plt.show()
-
 
 def u0_fun(oma,omg,ua,ja,xi,u0,fc):
     return (omg*oma*u0+(omg*u0+xi*ja*oma)*ua*fc)/(omg*oma+(ja*oma+omg)*ua*fc)
@@ -1024,7 +922,7 @@ def u_thr(omd,omf):
 def fc_thr(oma,omg,ua,ja,xi,uthr,u0):
     return omg*oma*(uthr-u0)/(ja*oma*ua*(xi-uthr)-omg*ua*uthr+omg*ua*u0)
 
-def glt_threshold(format='svg', dir='../Figures/'):
+def glt_threshold(format='svg', fig_dir='../Figures/'):
 
     hill = lambda x, k, n : (x**n)/(x**n + k**n)
     noise = lambda a, b, N: a + (b-a)*rand(N)
@@ -1091,11 +989,11 @@ def glt_threshold(format='svg', dir='../Figures/'):
 
     fig1, ax = figtem.generate_figure('1x1',figsize=(6.0,4.5),left=0.18,bottom=0.18,right=0.05,top=0.08)
     yLim = [.0,.65]
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([fcLim[0],fct['dep'],fct['dep'],fcLim[0]],[uthr['dep'],uthr['dep'],yLim[1],yLim[1]]))), ec='none', fc=colors['depressing']))
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([fcLim[1],fct['dep'],fct['dep'],fcLim[1]],[uthr['dep'],uthr['dep'],yLim[0],yLim[0]]))), ec='none', fc=colors['facilitating']))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([fcLim[0],fct['dep'],fct['dep'],fcLim[0]],[uthr['dep'],uthr['dep'],yLim[1],yLim[1]])))), ec='none', fc=colors['depressing']))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([fcLim[1],fct['dep'],fct['dep'],fcLim[1]],[uthr['dep'],uthr['dep'],yLim[0],yLim[0]])))), ec='none', fc=colors['facilitating']))
     ax[0].plot(fcLim,[uthr['dep'],uthr['dep']],'-',color=colors['uthr'],lw=lw)
     ax[0].errorbar(x/Hz,data['dep'],yerr=sdata['dep'],fmt=fmt,color='k',markersize=ms)
-    print x,data['dep'],sdata['dep']
+    print(x,data['dep'],sdata['dep'])
     ax[0].plot(fc,u0['dep'],'-',color=colors['u0'],lw=lw*1.5)
     ax[0].plot([fct['dep'],fct['dep']],yLim,':',color=colors['fct'],lw=lw*2)
     # Adjust axes
@@ -1114,8 +1012,8 @@ def glt_threshold(format='svg', dir='../Figures/'):
 
     fig2, ax = figtem.generate_figure('1x1',figsize=(6.0,4.5),left=0.18,bottom=0.18,right=0.05,top=0.08)
     yLim = [.15,1.]
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([fcLim[0],fct['fac'],fct['fac'],fcLim[0]],[uthr['fac'],uthr['fac'],yLim[0],yLim[0]]))), ec='none', fc=colors['facilitating']))
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([fcLim[1],fct['fac'],fct['fac'],fcLim[1]],[uthr['fac'],uthr['fac'],yLim[1],yLim[1]]))), ec='none', fc=colors['depressing']))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([fcLim[0],fct['fac'],fct['fac'],fcLim[0]],[uthr['fac'],uthr['fac'],yLim[0],yLim[0]])))), ec='none', fc=colors['facilitating']))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([fcLim[1],fct['fac'],fct['fac'],fcLim[1]],[uthr['fac'],uthr['fac'],yLim[1],yLim[1]])))), ec='none', fc=colors['depressing']))
     ax[0].plot(fcLim,[uthr['fac'],uthr['fac']],'-',color=colors['uthr'],lw=lw)
     ax[0].errorbar(x/Hz,data['fac'],yerr=sdata['fac'],fmt=fmt,color='k',markersize=ms)
     ax[0].plot(fc,u0['fac'],'-',color=colors['u0'],lw=lw*1.5)
@@ -1135,30 +1033,29 @@ def glt_threshold(format='svg', dir='../Figures/'):
     set_axlw(ax[0], lw=alw)
     set_axfs(ax[0], fs=afs)
 
-    # Save figures
+    # Save Figures
     plt.figure(1)
-    plt.savefig(dir+'stp_switch_dep.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'stp_switch_dep.'+format, format=format, dpi=600)
     # plt.close(fig0)
 
     plt.figure(2)
-    plt.savefig(dir+'stp_switch_fac.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'stp_switch_fac.'+format, format=format, dpi=600)
     # plt.close(fig1)
 
     plt.show()
 
-# def pre_regulation(sim=True, format='svg', dir='../Figures/'):
-def pre_regulation(sim=False, format='svg', dir='../Figures/'):
-    # stp_regulation(sim=sim, synapse='facilitating', format=format, dir=dir)
-    # stp_regulation(sim=sim, synapse='depressing', format=format, dir=dir)
-    # regulation_check(sim=sim, synapse='facilitating', format=format, dir=dir)
-    glt_threshold(format=format, dir=dir)
+def pre_regulation(sim=True, format='svg', fig_dir='../Figures/'):
+# def pre_regulation(sim=False, format='svg', fig_dir='../Figures/'):
+    stp_regulation(sim=sim, synapse='facilitating', format=format, fig_dir=fig_dir)
+    stp_regulation(sim=sim, synapse='depressing', format=format, fig_dir=fig_dir)
+    # regulation_check(sim=sim, synapse='facilitating', format=format, fig_dir=fig_dir)
+    # glt_threshold(format=format, fig_dir=fig_dir)
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Figure 3
 #-----------------------------------------------------------------------------------------------------------------------
-def syn_filtering(sim=False, format='svg', dir='../Figures/'):
-# def syn_filtering(sim=True, format='eps'):
-
+def syn_filtering(sim=True, format='svg', data_dir='../data/', fig_dir='../Figures/'):
+# def syn_filtering(sim=False, format='svg', data_dir='../data/', fig_dir='../Figures/'):
     # Global variable
     synapses = ['facilitating','depressing']
     # synapses = ['facilitating']
@@ -1190,7 +1087,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
             R['glt_closed'] = mon
 
             # Save data
-            svu.savedata([R, freq_vals], 'syn_filter_'+syn[:3]+'.pkl')
+            svu.savedata([R, freq_vals], data_dir+'syn_filter_'+syn[:3]+'.pkl')
 
         #---------------------------------------------------------------------------------------------------------------
         # Simulation /2 : Stepped stimulation and processing
@@ -1204,7 +1101,8 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
             # Retrieve parameters
             params = asmod.get_parameters(synapse=syn)
             params['f_c'] = 1.0/t_step * Hz
-            params['we'] = (60*0.27/10)*mV / (params['rho_c']*params['Y_T']) # excitatory synaptic weight (voltage)
+            # params['we'] = (60*0.27/10)*mV / (params['rho_c']*params['Y_T']) # excitatory synaptic weight (voltage)
+            params['we'] = (60*0.27/10)/(params['rho_c']*params['Y_T'])  # excitatory synaptic weight (voltage)
             stim_opts = {'f_in' : f_in[syn], 't_step' : t_step}
 
             if syn=='depressing':
@@ -1213,7 +1111,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
             N_syn = 1000
             alpha = [params['U_0__star'], params['alpha']]
             neuron_in,neuron_out,syns,gliot,es_astro2syn = asmod.openloop_model(params, N_syn=N_syn*size(alpha), N_astro=1, ics=None,
-                                                                                linear=False, post=True, sic=False, stdp=False,
+                                                                                linear=False, post=True, sic=None, stdp=False,
                                                                                 stimulus_syn='steps', stim_opts=stim_opts,
                                                                                 stimulus_glt='periodic')
             syns.alpha = tile(alpha, (1,N_syn))[0]
@@ -1223,7 +1121,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
             # Monitors
             # N = SpikeMonitor(neuron_in, record=True)
             N = StateMonitor(neuron_in, variables=['f_in'], record=0, dt=5*ms)
-            PSC = StateMonitor(neuron_out, variables=['g'], record=True, dt=1*ms)
+            PSC = StateMonitor(neuron_out, variables=['g_e'], record=True, dt=1*ms)
 
             # Run simulation
             run(duration, namespace={}, report='text')
@@ -1231,7 +1129,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
             # Save data
             N_mon = bu.monitor_to_dict(N)
             PSC_mon = bu.monitor_to_dict(PSC)
-            svu.savedata([N_mon,PSC_mon], 'syn_comp_'+syn[:3]+'.pkl')
+            svu.savedata([N_mon,PSC_mon], data_dir+'syn_comp_'+syn[:3]+'.pkl')
 
     #-------------------------------------------------------------------------------------------------------------------
     # Plotting
@@ -1250,8 +1148,8 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
 
     # Define some lambdas
     # Functions to compute mean and std of released resources
-    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in xrange(npts)] # mean r_S per freq value
-    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in xrange(npts)]  # std on r_S per freq value
+    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in range(npts)] # mean r_S per freq value
+    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in range(npts)]  # std on r_S per freq value
 
     for i,syn in enumerate(synapses):
         #---------------------------------------------------------------------------------------------------------------
@@ -1261,7 +1159,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
         _, ax = figtem.generate_figure('2x1', figsize=(5.0,5.0), left=0.20, right=0.08, bottom=0.15, top=0.05, vs=[0.05])
 
         # Load data
-        [R, freq_vals] = svu.loaddata('syn_filter_'+syn[:3]+'.pkl')
+        [R, freq_vals] = svu.loaddata(data_dir+'syn_filter_'+syn[:3]+'.pkl')
 
         # Plot
         xticks = [0.1,1.0,10,100]
@@ -1286,7 +1184,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
         for _,k in enumerate(R.keys()):
             ax[0].errorbar(freq_vals,r_mean(R[k]['U_0'],N_points),yerr=r_std(R[k]['U_0'],N_points),fmt=fmt,color=color[k])
             ax[1].errorbar(freq_vals,r_mean(R[k]['r_S'],N_points),yerr=r_std(R[k]['r_S'],N_points),fmt=fmt,color=color[k])
-            for j in xrange(2): ax[j].set_xscale('log')
+            for j in range(2): ax[j].set_xscale('log')
 
         figtem.adjust_spines(ax[0], ['left'], position=spine_position)
         figtem.adjust_spines(ax[1], ['left','bottom'], position=spine_position)
@@ -1297,7 +1195,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
         ax[0].set_ylabel('Synaptic\nRelease Pr.', fontsize=lfs, multialignment='center')
         ax[1].set_ylabel('Released\nNt. Resources', fontsize=lfs, multialignment='center')
 
-        for i in xrange(2):
+        for i in range(2):
             ax[i].set_xscale('log')
             ax[i].set_ylim(ylims)
             ax[i].set_yticks(yticks)
@@ -1313,7 +1211,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
 
         # Save figure
         figure(plt.get_fignums()[-1])
-        plt.savefig(dir+'fig3_syn_filter_'+syn[:3]+'.'+format, format=format, dpi=600)
+        plt.savefig(fig_dir+'fig3_syn_filter_'+syn[:3]+'.'+format, format=format, dpi=600)
 
         #---------------------------------------------------------------------------------------------------------------
         # Simulation /2 : Synaptic processing
@@ -1322,7 +1220,7 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
         _, ax = figtem.generate_figure('2x1_custom', figsize=(4.5,5.0), left=0.20, right=0.08, bottom=0.15, top=0.05, vs=[0.05])
 
         # Load data
-        N,PSC = svu.loaddata('syn_comp_'+syn[:3]+'.pkl')
+        N,PSC = svu.loaddata(data_dir+'syn_comp_'+syn[:3]+'.pkl')
 
         # Additional data (for rescaling PSCs)
         R_soma = 60 * Mohm
@@ -1347,15 +1245,15 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
         # Plot PSCs
         ylims = [-1.0, 60.0]
         yticks = arange(0,60.1,20)
-        ax[1].plot(PSC['t'], mean(PSC['g'][::2]/(R_soma*cf),axis=0), c='k', lw=lw, zorder=9)    # original PSC (w/out gliotransmission)
-        ax[1].plot(PSC['t'], mean(PSC['g'][1::2]/(R_soma*cf),axis=0), c=colors[syn], lw=lw, zorder=10, alpha=0.6) # w/ gliotransmission
+        ax[1].plot(PSC['t'], mean(PSC['g_e'][::2]/(R_soma*cf),axis=0), c='k', lw=lw, zorder=9)    # original PSC (w/out gliotransmission)
+        ax[1].plot(PSC['t'], mean(PSC['g_e'][1::2]/(R_soma*cf),axis=0), c=colors[syn], lw=lw, zorder=10, alpha=0.6) # w/ gliotransmission
         figtem.adjust_spines(ax[1], ['left', 'bottom'], position=spine_position)
         ax[1].set_xlim(tlims)
         ax[1].set_xticks(xticks)
         ax[1].xaxis.set_tick_params(labelsize=afs)
         ax[1].set_xlabel('Time (${0}$)'.format(sympy.latex(second)), fontsize=lfs)
-        ax[1].set_ylim(ylims)
-        ax[1].set_yticks(yticks)
+        # ax[1].set_ylim(ylims)
+        # ax[1].set_yticks(yticks)
         ax[1].set_ylabel('PSC (${0}$)'.format(sympy.latex(pA)), fontsize=lfs)
         # Adjust labels
         set_axlw(ax[1], lw=alw)
@@ -1363,14 +1261,14 @@ def syn_filtering(sim=False, format='svg', dir='../Figures/'):
 
         # Save figure
         figure(plt.get_fignums()[-1])
-        plt.savefig(dir+'fig3_syn_processing_'+syn[:3]+'.'+format, format=format, dpi=600)
+        plt.savefig(fig_dir+'fig3_syn_processing_'+syn[:3]+'.'+format, format=format, dpi=600)
 
     plt.show()
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Figure 4
 #-----------------------------------------------------------------------------------------------------------------------
-def sic_mechanism(sim=False, format='eps', dir='./'):
+def sic_mechanism(sim=False, format='eps', data_dir='../data/', fig_dir='../Figures/'):
     '''
     Build figure for the effect of SIC currents (single synapse)
     '''
@@ -1430,10 +1328,10 @@ def sic_mechanism(sim=False, format='eps', dir='./'):
         glt_mon = bu.monitor_to_dict(glt)
 
         # Save data
-        svu.savedata([post_mon,glt_mon],'sic_mechanism.pkl')
+        svu.savedata([post_mon,glt_mon],data_dir+'sic_mechanism.pkl')
 
     # Plot SIC mechanism
-    [post, glt] = svu.loaddata('sic_mechanism.pkl')
+    [post, glt] = svu.loaddata(data_dir+'sic_mechanism.pkl')
 
     fig0, ax = figtem.generate_figure('3x1',figsize=(4.8,5.5),left=0.23,right=0.05,bottom=0.12,top=0.05,vs=[0.04])
     tlims = array([0,duration])
@@ -1485,14 +1383,14 @@ def sic_mechanism(sim=False, format='eps', dir='./'):
     set_axlw(ax[2], lw=alw)
     set_axfs(ax[2], fs=afs)
 
-    # Save figures
+    # Save Figures
     figure(plt.get_fignums()[-1])
-    plt.savefig(dir+'fig4_sic_mechanism.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig4_sic_mechanism.'+format, format=format, dpi=600)
     # plt.close('all')
 
     # plt.show()
 
-def post_firing(sim=False, format='eps', dir='./'):
+def post_firing(sim=False, format='eps', data_dir='../data/',fig_dir='../Figures/'):
     '''
     Build figure for the effect of SIC currents (single synapse)
     '''
@@ -1526,7 +1424,7 @@ def post_firing(sim=False, format='eps', dir='./'):
     # General parameters for simulation also used in the analysis
     duration = 1.0*second
 
-    # # Stimulation (used in figures too)
+    # # Stimulation (used in Figures too)
     offset = 0.08
     isi = 0.03
     spikes = arange(offset,0.5,isi)*second
@@ -1561,13 +1459,13 @@ def post_firing(sim=False, format='eps', dir='./'):
         # Convert monitors to dictionaries and save them for analysis
         post_mon = bu.monitor_to_dict(post)
         # glt_mon = bu.monitor_to_dict(glt)
-        svu.savedata([post_mon],'sic_firing.pkl')
+        svu.savedata([post_mon],data_dir+'sic_firing.pkl')
 
     #-------------------------------------------------------------------------------------------------------------------
     # Plot results
     #-------------------------------------------------------------------------------------------------------------------
     # Load simulation
-    post = svu.loaddata('sic_firing.pkl')[0]
+    post = svu.loaddata(data_dir+'sic_firing.pkl')[0]
 
     fig1, ax = figtem.generate_figure('3x1',figsize=(4.8,5.5),left=0.23,right=0.05,bottom=0.12,top=0.05,vs=[0.04])
     tlims = array([0,duration])
@@ -1603,7 +1501,7 @@ def post_firing(sim=False, format='eps', dir='./'):
     # ax[1].plot(post['t'], -(post['g_e'][0] + post['g_sic'][0]), color=colors['sic'], linewidth=lw)
     # w/out SIC
     ax[1].plot(post['t']+0.005, -post['g_e'][1] / R_soma / cf, color=colors['nog'], linewidth=lw)
-    # ax[1].plot(post['t']+0.005, post['g_e'][1]/1.e-3, color=colors['nog'], linewidth=lw)
+    # ax[1].plot(post['t']+0.005, post['v'][1]/1.e-3, color=colors['nog'], linewidth=lw)
     # Format x-axis
     figtem.adjust_spines(ax[1], ['left'], position=spine_position)
     ax[1].set_xlim(tlims)
@@ -1637,14 +1535,14 @@ def post_firing(sim=False, format='eps', dir='./'):
     set_axlw(ax[2], lw=alw)
     set_axfs(ax[2], fs=afs)
 
-    # Save figures
+    # Save Figures
     figure(plt.get_fignums()[-1])
-    plt.savefig(dir+'fig4_sic_postfiring.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig4_sic_postfiring.'+format, format=format, dpi=600)
     # plt.close('all')
 
     # plt.show()
 
-def sic_io(sim=False, format='eps', dir='./'):
+def sic_io(sim=False, format='eps', data_dir='../data/',fig_dir='../Figures/'):
     '''
     Compute I/O f_out vs. f_in (f_c) of postsynaptic firing
     :return:
@@ -1693,7 +1591,7 @@ def sic_io(sim=False, format='eps', dir='./'):
         G_sic_0 = params['G_sic']
         mf = 1.5
         G_sic = [0.0*mV, params['G_sic'], mf*params['G_sic']]
-        for i in xrange(size(fc)):
+        for i in range(size(fc)):
             params['G_sic'] = G_sic[i]
             io_data['fin_'+str(i)] = analysis.freq_out(params, sim=sim,
                                                        duration=duration,
@@ -1705,7 +1603,7 @@ def sic_io(sim=False, format='eps', dir='./'):
         fin = [0,1.0,0,1.0]*Hz
         fc_range = [0.01,10]
         G_sic = [G_sic_0, G_sic_0, mf*G_sic_0, mf*G_sic_0]
-        for i in xrange(size(fin)):
+        for i in range(size(fin)):
             params['G_sic'] = G_sic[i]
             io_data['fc_'+str(i)] = analysis.freq_out(params, sim=sim,
                                                       duration=duration,
@@ -1713,10 +1611,10 @@ def sic_io(sim=False, format='eps', dir='./'):
                                                       gliot=True, show=False)
 
         # Save data
-        svu.savedata([io_data],'sic_io.pkl')
+        svu.savedata([io_data],data_dir+'sic_io.pkl')
 
     # Load data
-    io_data = svu.loaddata('sic_io.pkl')[0]
+    io_data = svu.loaddata(data_dir+'sic_io.pkl')[0]
 
     # # Generate figure template
     fig2, ax = figtem.generate_figure('2x1', figsize=(5.0,6.0), left=0.23, right=0.08, bottom=0.12, top=0.05, vs=[0.15])
@@ -1797,17 +1695,17 @@ def sic_io(sim=False, format='eps', dir='./'):
 
     # Save figure
     figure(plt.get_fignums()[-1])
-    plt.savefig(dir+'fig4_sic_io.'+format, format=format, dpi=600)
+    plt.savefig(fig_dir+'fig4_sic_io.'+format, format=format, dpi=600)
     # plt.savefig('fig4_sic_io.pdf', format='pdf', dpi=600)
 
     # plt.show()
 
-def sic(sim=False, format='svg', dir='../Figures/'):
-# def sic(sim=True, format='eps', dir='./'):
+def sic(sim=True, format='svg', fig_dir='../Figures/'):
+# def sic(sim=False, format='svg', fig_dir='../Figures/'):
     # Generate figure that show mechanism of SICs
-    sic_mechanism(sim=sim, format=format, dir=dir)
-    post_firing(sim=sim, format=format, dir=dir)
-    sic_io(sim=sim, format=format, dir=dir)
+    sic_mechanism(sim=sim, format=format, fig_dir=fig_dir)
+    post_firing(sim=sim, format=format, fig_dir=fig_dir)
+    sic_io(sim=sim, format=format, fig_dir=fig_dir)
     plt.show()
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -1825,9 +1723,6 @@ def plot_stdp(S, P, alpha, params, color='k'):
             'cf'  : 0.1,   # correction Factor for plotting \rho(t) over reference line
             }
 
-    # # User-defined parameters
-    # opts = gu.varargin(opts,**kwargs)
-
     # Fixed parameters
     dt = diff(S['t'])[0]
     tlims = [S['t'][0],S['t'][-1]+dt]
@@ -1842,7 +1737,7 @@ def plot_stdp(S, P, alpha, params, color='k'):
     u0 = lambda g, U_0_star, xi : (1-g)*U_0_star + xi*g
     normalize = lambda x, x0 : (x-x0)/x0*100
 
-    for i in xrange(size(alpha)):
+    for i in range(size(alpha)):
         # Generate figure
         fig, ax = figtem.generate_figure('4x1_1L3S', figsize=(7.0,6.0), left=0.14, right=0.1, bottom=0.15, top=0.05)
         #-------------------------------------------------------------------------------------------------------------------
@@ -1969,7 +1864,7 @@ def plot_stdp(S, P, alpha, params, color='k'):
         set_axlw(ax[3], lw=opts['alw'])
         set_axfs(ax[3], fs=opts['afs'])
 
-def stdp_mechanism(sim=False, format='eps', dir='./'):
+def stdp_mechanism(sim=False, format='eps', data_dir='../data/', fig_dir='../Figures/'):
 # def stdp_mechanism(sim=True):
 
     # It is likely that you may tuned not on the refractory but rather on the ICs
@@ -2010,7 +1905,7 @@ def stdp_mechanism(sim=False, format='eps', dir='./'):
 
     if sim:
         S_mon, P_mon = {}, {}
-        for k,v in Dt.iteritems():
+        for k,v in Dt.items():
             # Generate model
             source_group,target_group,synapses,gliot,es_astro2syn = asmod.openloop_model(params, N_syn=3, N_astro=1,
                                                                                          dt=0.1*ms,
@@ -2039,10 +1934,10 @@ def stdp_mechanism(sim=False, format='eps', dir='./'):
             P_mon[k] = bu.monitor_to_dict(P, monitor_type='spike', fields=['spk'])
 
         # Save data
-        svu.savedata([S_mon, P_mon], 'stdp_mechanism.pkl')
+        svu.savedata([S_mon, P_mon], data_dir+'stdp_mechanism.pkl')
 
     # Load data
-    [S, P] = svu.loaddata('stdp_mechanism.pkl')
+    [S, P] = svu.loaddata(data_dir+'stdp_mechanism.pkl')
 
     # Plotting options
     colors = {'ltd' : '#003366', 'ltp': '#FF0066'}
@@ -2062,7 +1957,7 @@ def stdp_mechanism(sim=False, format='eps', dir='./'):
             p = protocol[0]
         else:
             p = protocol[1]
-        plt.savefig(dir+'fig5_'+p+'_'+label[i%3]+'.'+format, format=format, dpi=600)
+        plt.savefig(fig_dir+'fig5_'+p+'_'+label[i%3]+'.'+format, format=format, dpi=600)
 
     plt.show()
 
@@ -2082,7 +1977,7 @@ def reshape_monitor(monitor):
     '''
     if type(monitor) != type({}):
         rmon = {}
-        for k,data in monitor[0].iteritems():
+        for k,data in monitor[0].items():
             rmon[k] = data
             if size(monitor)>0:
                 # if more than one simulation then do unfold otherwise just a standard dictionary
@@ -2094,7 +1989,7 @@ def reshape_monitor(monitor):
                 if k!='t':
                     # Create an empty array to stack on it (same number of columns as the data to stack)
                     rmon[k] = array([], dtype=int64).reshape(0,shape(data)[1])
-                    for n in xrange(shape(data)[0]):
+                    for n in range(shape(data)[0]):
                         rmon[k] = vstack((rmon[k], data[n]))
                         # rmon[k] = data[n]   # get the 'n' entry of data in the first simulation of the monitor array
                         for val in monitor[1:]:
@@ -2120,7 +2015,7 @@ def stdp_curves_mean(Dt, C, params, duration, N_sim=1):
 
     d, p = zeros((N_syn,1)), zeros((N_syn,1))
     dw = []
-    for i in xrange(N_sim):
+    for i in range(N_sim):
     # i = 0
     # for v in b:
         # params['sigma'] = v
@@ -2169,9 +2064,9 @@ def compute_stdp_curves(Dt, C, W, params, duration, N_sim=1, mean_field=False):
     N_syn = shape(C['C_syn'][::N_sim])[0]
 
     # Allocate memory
-    d, p = zeros((N_sim,shape(C['C_syn'])[0]/N_sim)), zeros((N_sim,shape(C['C_syn'])[0]/N_sim))
+    d, p = zeros((N_sim,shape(C['C_syn'])[0]//N_sim)), zeros((N_sim,shape(C['C_syn'])[0]//N_sim))
     # Compute Ca2+ time fractions
-    for i in xrange(N_sim):
+    for i in range(N_sim):
         for n,signal in enumerate(C['C_syn'][i::N_sim]):
             idx, frac = analysis.threshold_crossing(C['t'],signal,params['Theta_p'])
             p[i][n] = sum(frac)/duration
@@ -2181,11 +2076,11 @@ def compute_stdp_curves(Dt, C, W, params, duration, N_sim=1, mean_field=False):
     # Compute STDP curve
     if not mean_field:
         dw = zeros((N_sim,shape(W['W'])[0]/N_sim))
-        for i in xrange(N_sim):
+        for i in range(N_sim):
             dw[i] = normalize(W['W'][i::N_sim][:,-1],params['W_0'])
     else:
         dw = stdp_curves_mean(Dt, C, params, duration, N_sim=N_sim)
-        for i in xrange(N_sim): dw[i] *= 100
+        for i in range(N_sim): dw[i] *= 100
 
     return d,p,dw
 
@@ -2216,7 +2111,7 @@ def plot_stdp_curves(Dt, C, W, params, duration, N_sim=1, mean_field=False,
 
     # Compatibility for C,W saved as lists of dict (ADDITION)
     if type(C)==type(list()):
-        for i in xrange(size(C)):
+        for i in range(size(C)):
             ax = plot_stdp_curves(Dt, C[i], W[i], params, duration, N_sim=1, mean_field=mean_field,
                                   ax=ax, color=[color[i]], zorder=[zorder[i]], alpha=[alpha[i]])
     else:
@@ -2228,7 +2123,7 @@ def plot_stdp_curves(Dt, C, W, params, duration, N_sim=1, mean_field=False,
 
         d, p = zeros((N_syn,1)), zeros((N_syn,1))
         # Treatment of scalar alpha
-        for i in xrange(N_sim):
+        for i in range(N_sim):
             for n,signal in enumerate(C['C_syn'][i::N_sim]):
                 idx, frac = analysis.threshold_crossing(C['t'],signal,params['Theta_p'])
                 p[n] = sum(frac)/duration
@@ -2245,13 +2140,13 @@ def plot_stdp_curves(Dt, C, W, params, duration, N_sim=1, mean_field=False,
         if not mean_field:
             ax[1].plot((Dt[0], Dt[-1]), (0.0,0.0), c=color0, ls='-', lw=lw0)
             ax[1].plot((0.0, 0.0), (-15,15), c=color0, ls='-', lw=lw)
-            for i in xrange(N_sim):
+            for i in range(N_sim):
                 ax[1].plot(Dt, normalize(W['W'][i::N_sim][:,-1],params['W_0']), marker='o', color=colors[i], lw=lw0, zorder=zorder[i], alpha=alpha[i])
         else:
             dw = stdp_curves_mean(Dt, C, params, duration, N_sim=N_sim)
             ax[1].plot((Dt[0], Dt[-1]), (0.0,0.0), c=color0, ls='-', lw=lw0)
             ax[1].plot((0.0, 0.0), (-60,60), c=color0, ls='-', lw=lw)
-            for i in xrange(N_sim):
+            for i in range(N_sim):
                 ax[1].plot(Dt, dw[i]*100., marker='o', color=color[i], lw=lw0, zorder=zorder[i], alpha=alpha[i])
     return ax
 
@@ -2268,7 +2163,7 @@ def stdp_curve_parameters(dt, C, N_sim, params, duration=61*second):
     # Compute mean-field curves
     stdp_curve = stdp_curves_mean(dt, C, params, duration=duration, N_sim=N_sim)
 
-    for i in xrange(N_sim):
+    for i in range(N_sim):
         # Find crossing point
         # First identify first/last point above/beyond zero
         indices = ((inbetween(dt,stdp_curve[i])&(stdp_curve[i]<0)).nonzero()[0][-1],
@@ -2297,7 +2192,9 @@ def stdp_curve_parameters(dt, C, N_sim, params, duration=61*second):
 
     return array(thr), array(wmin), array(wmax), array(aratio), array(thr2)
 
-def stdp_curves_stp(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, N_pts=50, stdp='nonlinear', gliot=False):
+def stdp_curves_stp(params, Dt_min, Dt, duration=61*second,
+                    dt_solv=0.1*ms, N_pts=50, stdp='nonlinear', gliot=False,
+                    data_dir='../data/'):
     '''
     Show effect of short-term plasticity on STDP curves
     '''
@@ -2352,7 +2249,7 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, N_pt
             W_mon.append(bu.monitor_to_dict(W))
 
         # Save data
-        svu.savedata([C_mon, W_mon, dt, U_0__star, ns(1,1,N_pts)], 'stdp_curves_0_'+lbl+'.pkl')
+        svu.savedata([C_mon, W_mon, dt, U_0__star, ns(1,1,N_pts)], data_dir+'stdp_curves_0_'+lbl+'.pkl')
     else:
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /2 : show effect of gliotransmission modulation on synaptic plasticity
@@ -2387,9 +2284,9 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, N_pt
         # You will need to slice data as [::N_astro]
 
         # Save data
-        svu.savedata([C_mon, W_mon, dt, alpha, ns(N_syn,1,N_pts)], 'stdp_curves_glt_'+lbl+'.pkl')
+        svu.savedata([C_mon, W_mon, dt, alpha, ns(N_syn,1,N_pts)], data_dir+'stdp_curves_glt_'+lbl+'.pkl')
 
-def stdp_curves_parameters_sim_pre(params, Dt_min, Dt, dt_solv, N_pts, N_syn, stdp='nonlinear'):
+def stdp_curves_parameters_sim_pre(params, Dt_min, Dt, dt_solv, N_pts, N_syn, stdp='nonlinear', data_dir='../data/'):
     '''
     Compute how threshold and LTP/LTD area ratio change for different gliotransmitter modulations
     '''
@@ -2436,9 +2333,9 @@ def stdp_curves_parameters_sim_pre(params, Dt_min, Dt, dt_solv, N_pts, N_syn, st
     # You will need to slice data as [::N_astro]
 
     # Save data
-    svu.savedata([C_mon, dt, alpha, ns(N_syn,1,N_pts)], 'stdp_curves_xi_'+lbl+'.pkl')
+    svu.savedata([C_mon, dt, alpha, ns(N_syn,1,N_pts)], data_dir+'stdp_curves_xi_'+lbl+'.pkl')
 
-def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
+def stdp_curves(sim=False, stdp='nonlinear', format='eps', data_dir='../data/', fig_dir='../Figures/'):
 
     # Get model parameters
     params = asmod.get_parameters(synapse='neutral', stdp=stdp)
@@ -2484,16 +2381,16 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
         # Simulations /1: Show effect of short-term plasticity on STDP curves w/out
         #---------------------------------------------------------------------------------------------------------------
         stdp_curves_stp(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, N_pts=N_pts,
-                        duration=duration, dt_solv=dt_step, stdp=stdp, gliot=False)
+                        duration=duration, dt_solv=dt_step, stdp=stdp, gliot=False, data_dir=data_dir)
         # ---------------------------------------------------------------------------------------------------------------
         # Simulations /2: Show effect of short-term plasticity on STDP curves w/ gliotransmission
         # ---------------------------------------------------------------------------------------------------------------
         stdp_curves_stp(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, N_pts=N_pts,
-                        duration=duration, dt_solv=dt_step, stdp=stdp, gliot=True)
+                        duration=duration, dt_solv=dt_step, stdp=stdp, gliot=True, data_dir=data_dir)
         # ---------------------------------------------------------------------------------------------------------------
         # Simulation /3 : show effect of gliotransmission for finer xi on threshold and peaks / areas of different plasticity
         #---------------------------------------------------------------------------------------------------------------
-        stdp_curves_parameters_sim_pre(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, dt_solv=dt_step, N_pts=200, N_syn=50)
+        stdp_curves_parameters_sim_pre(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, dt_solv=dt_step, N_pts=200, N_syn=50, data_dir=data_dir)
 
     #---------------------------------------------------------------------------------------------------------------
     # Plot results
@@ -2519,7 +2416,7 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     # ---------------------------------------------------------------------------------------------------------------
     # Simulation /1
     # ---------------------------------------------------------------------------------------------------------------
-    [C, W, dt, u0, _] = svu.loaddata('stdp_curves_0_'+lbl+'.pkl')
+    [C, W, dt, u0, _] = svu.loaddata(data_dir+'stdp_curves_0_'+lbl+'.pkl')
 
     # C = reshape_monitor(C)
     # W = reshape_monitor(W)
@@ -2586,7 +2483,7 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /2
     #---------------------------------------------------------------------------------------------------------------
-    [C, W, dt, _, _] = svu.loaddata('stdp_curves_glt_'+lbl+'.pkl')
+    [C, W, dt, _, _] = svu.loaddata(data_dir+'stdp_curves_glt_'+lbl+'.pkl')
 
     # Plot results
     p_colors = ['k',color['depressing'], color['facilitating']]
@@ -2639,10 +2536,10 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /3
     #---------------------------------------------------------------------------------------------------------------
-    [C, dt, alpha, _] = svu.loaddata('stdp_curves_xi_'+lbl+'.pkl')
+    [C, dt, alpha, _] = svu.loaddata(data_dir+'stdp_curves_xi_'+lbl+'.pkl')
 
     # Compute curve parameters
-    thr, wmin, wmax, aratio, thr2 = stdp_curve_parameters(dt/1e-3, C, size(alpha), params)
+    thr, wmin, wmax, aratio, thr2 = stdp_curve_parameters(dt/second, C, size(alpha), params)
 
     # Define some lambdas for post-processing
     altthr = lambda thr, xi : (thr<Inf)&(xi>params['U_0__star'])
@@ -2665,9 +2562,9 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     ylim = [-3.0,1.7]
     transparency = 0.4
     # Add patches
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim+ylim[::-1]))), ec='none', fc=color['depressing'],alpha=transparency))
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim+ylim[::-1]))), ec='none', fc=color['facilitating'], alpha=transparency))
-    ax[0].add_artist(mpatches.Polygon(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[0],1.1*ylim[-1],1.1*ylim[-1],ylim[0]]))), ec='k', ls='dotted', fill=False, hatch='/'))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim+ylim[::-1])))), ec='none', fc=color['depressing'],alpha=transparency))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim+ylim[::-1])))), ec='none', fc=color['facilitating'], alpha=transparency))
+    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[0],1.1*ylim[-1],1.1*ylim[-1],ylim[0]])))), ec='k', ls='dotted', fill=False, hatch='/'))
 
     # Zero crossing
     ax[0].plot(xlim, [0.0,0.0], ls='-', c=color['zero'], lw=lw[0])
@@ -2688,9 +2585,9 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     # Upper part of the graph
     ylim = [32,90.0]
     # Add patches
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim+ylim[::-1]))), ec='none', fc=color['depressing'], alpha=transparency))
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim+ylim[::-1]))), ec='none', fc=color['facilitating'], alpha=transparency))
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[0],1.1*ylim[-1],1.1*ylim[-1],ylim[0]]))), ec='k', ls='dotted', fill=False, hatch='/'))
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim+ylim[::-1])))), ec='none', fc=color['depressing'], alpha=transparency))
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim+ylim[::-1])))), ec='none', fc=color['facilitating'], alpha=transparency))
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[0],1.1*ylim[-1],1.1*ylim[-1],ylim[0]])))), ec='k', ls='dotted', fill=False, hatch='/'))
     # U_0__star
     ax_aux.plot([params['U_0__star'],params['U_0__star']], ylim, ls='--', c=color['U_0__star'], lw=lw[0])
     ax_aux.plot(alpha[altthr(thr2,alpha)], thr2[altthr(thr2,alpha)], ls='-', marker='o', color=color['thr'][1], lw=lw[1])
@@ -2740,15 +2637,15 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     # Area ratio
     ax_aux = ax[1].twinx()
     # # Add patches
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim[1]+ylim[1][::-1]))), ec='none', fc=color['depressing'],alpha=0.5))
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim[1]+ylim[1][::-1]))), ec='none', fc=color['facilitating'], alpha=0.5))
-    ax_aux.add_artist(mpatches.Polygon(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[1][0],1.1*ylim[1][-1],1.1*ylim[1][-1],ylim[1][0]]))), ec='k', ls='dotted', fill=False, hatch='/'))
-    # Extrapolate the first data points due to limited Dt exploration (might be commented for Dt range sufficiently large)
-    if sum(aratio[~altthr(thr2,alpha)]==0)>0:
-        index = where(aratio[~altthr(thr2,alpha)]==0)[0][-1] + 1
-        extrapolator = UnivariateSpline(alpha[~altthr(thr2,alpha)][index::], aratio[~altthr(thr2,alpha)][2::], k=3)
-        aratio[0:index] = extrapolator(alpha[0:index])
-    # ax_aux.plot(alpha[~altthr(thr2,alpha)], aratio[~altthr(thr2,alpha)], ls='-', marker='^', color=color['ratio'], lw=lw[1])
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim[1]+ylim[1][::-1])))), ec='none', fc=color['depressing'],alpha=0.5))
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim[1]+ylim[1][::-1])))), ec='none', fc=color['facilitating'], alpha=0.5))
+    ax_aux.add_artist(mpatches.Polygon(list(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[1][0],1.1*ylim[1][-1],1.1*ylim[1][-1],ylim[1][0]])))), ec='k', ls='dotted', fill=False, hatch='/'))
+    # # Extrapolate the first data points due to limited Dt exploration (might be commented for Dt range sufficiently large)
+    # if sum(aratio[~altthr(thr2,alpha)]==0)>0:
+    #     index = where(aratio[~altthr(thr2,alpha)]==0)[0][-1] + 1
+    #     extrapolator = UnivariateSpline(alpha[~altthr(thr2,alpha)][index::], aratio[~altthr(thr2,alpha)][2::], k=3)
+    #     aratio[0:index] = extrapolator(alpha[0:index])
+    # # ax_aux.plot(alpha[~altthr(thr2,alpha)], aratio[~altthr(thr2,alpha)], ls='-', marker='^', color=color['ratio'], lw=lw[1])
     ax_aux.plot(alpha,aratio,ls='-',marker='^',color=color['ratio'],lw=lw[1])
     # First make patch and spines of ax_aux invisible
     figtem.make_patch_spines_invisible(ax_aux)
@@ -2785,15 +2682,15 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     set_axfs(ax[1], fs=afs)
 
     #-------------------------------------------------------------------------------------------------------------------
-    # # Save figures
+    # # Save Figures
     #-------------------------------------------------------------------------------------------------------------------
-    save_figures(label=dir+'fig5_stdp_pre_',filename=['stp','xi','curves'], format=format, dpi=600)
+    save_figures(label=fig_dir+'fig5_stdp_pre_',filename=['stp','xi','curves'], format=format, dpi=600)
 
     plt.show()
 
 def test_currents(post=True):
     #TODO: READ THIS COMMENT FOR TODO WORK UPON REVIVING THE PROJECT
-    #- Figure out the 2-exp nonlinear calcium model and run figures 6-7 accordingly
+    #- Figure out the 2-exp nonlinear calcium model and run Figures 6-7 accordingly
     #- Once understood the nonlinear Ca2+ model also implement SIC currents and postsynaptic currents as a 2-exp currents
     #- The current version of SIC-mechanism (Figure 5) is correct, but I am not sure the model used is correct (refer to Barbier et al. JN 2014)
 
@@ -2893,7 +2790,7 @@ def test_currents(post=True):
     run(duration,namespace={},report='text')
 
     fig,ax = plt.subplots(2,2)
-    print shape(ax)
+    print(shape(ax))
     # ax[0].plot(S.t_,S[0].Y_S_,'k-')
     ax[0][0].plot(S.t_,S[0].Y_S_,'r-')
     ax[0][0].set_ylabel('B')
@@ -2908,10 +2805,10 @@ def test_currents(post=True):
 
     # plt.show()
 
-# def stdp_pre(sim=True, format='eps', dir='../Figures/'):
-def stdp_pre(sim=False, format='svg', dir='../Figures/'):
+# def stdp_pre(sim=True, format='eps', fig_dir='../Figures/'):
+def stdp_pre(sim=False, format='svg', fig_dir='../Figures/'):
     # stdp_mechanism(sim=sim, format=format, dir=dir)
-    stdp_curves(sim=sim, format=format, dir=dir)
+    stdp_curves(sim=sim, format=format, fig_dir=fig_dir)
 #     test_currents()
     plt.show()
 
@@ -2930,9 +2827,6 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
             'cf'  : 0.1,   # correction Factor for plotting \rho(t) over reference line
             }
 
-    # # User-defined parameters
-    # opts = gu.varargin(opts,**kwargs)
-
     # Fixed parameters
     dt = diff(S['t'])[0]
     tlims = [S['t'][0],S['t'][-1]+dt]
@@ -2946,8 +2840,8 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
     normalize = lambda x, x0 : (x-x0)/x0*100
 
     # for i in xrange(size(Csic[::N_astro])):
-    for i in xrange(N_syn):
-        for j in xrange(N_astro):
+    for i in range(N_syn):
+        for j in range(N_astro):
             # Generate figure
             fig, ax = figtem.generate_figure('4x1_1L3S', figsize=(6.0,6.0), left=0.16, right=0.1, bottom=0.15, top=0.05)
             ylims = (0.0, params['Cpost']+0.1)
@@ -2955,7 +2849,8 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
             #-------------------------------------------------------------------------------------------------------------------
             # Top plot / 1
             #-------------------------------------------------------------------------------------------------------------------
-            l, m, b = ax[0].stem(N['t'][0], ones((len(N['t'][i+j*N_syn]),1)), linefmt='k', markerfmt='', basefmt='')
+            idx = np.where(N['i']==i+j*N_syn)[0]
+            l, m, b = ax[0].stem(N['t'][idx], ones(len(idx)), linefmt='k', markerfmt='', basefmt='')
             plt.setp(m, 'linewidth', opts['lw'])
             plt.setp(l, 'linestyle', 'none')
             plt.setp(b, 'linestyle', 'none')
@@ -2977,7 +2872,8 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
             # Top plot / 2
             #-------------------------------------------------------------------------------------------------------------------
             # Cpost
-            l, m, b = ax[1].stem(P['t'][0], params['Cpost']*ones((len(P['t'][i+j*N_syn]),1)), linefmt='k', markerfmt='', basefmt='')
+            idx = np.where(P['i']==i+j*N_syn)[0]
+            l, m, b = ax[1].stem(P['t'][idx], params['Cpost']*ones(len(idx)), linefmt='k', markerfmt='', basefmt='')
             plt.setp(m, 'linewidth', opts['lw'])
             plt.setp(l, 'linestyle', 'none')
             plt.setp(b, 'linestyle', 'none')
@@ -2987,7 +2883,7 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
             # cf = 3.5 # correction factor to show currrent in mV (hard-coded) as in the SIC
             figtem.adjust_spines_uneven(ax_aux, va='right', ha='bottom', position=opts['spine_position'])
             # Same axes (obsolete)
-            lg, mg, bg =  ax_aux.stem(G['t'][j], Csic[i]*ones((len(G['t'][j]),1)), linefmt=colors['sic'], markerfmt='', basefmt='')
+            lg, mg, bg =  ax_aux.stem([G['t'][j]], [Csic[i]], linefmt=colors['sic'], markerfmt='', basefmt='')
             plt.setp(mg, 'linewidth', opts['lw'])
             plt.setp(lg, 'linestyle', 'none')
             plt.setp(bg, 'linestyle', 'none')
@@ -3063,7 +2959,7 @@ def plot_stdp_sic(S, N, P, G, Csic, params, N_syn=1, N_astro=1, color='k'):
             set_axlw(ax[3], lw=opts['alw'])
             set_axfs(ax[3], fs=opts['afs'])
 
-def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
+def stdp_sic_mechanism(sim=False, format='eps', data_dir='../data/', fig_dir='../Figures/'):
 
     # It is likely that you may tuned not on the refractory but rather on the ICs
     params = asmod.get_parameters(stdp='nonlinear')
@@ -3100,10 +2996,10 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
     # Simulation time
     duration =  0.8*second
     # Build stimulation protocol
-    spikes_pre = {'ltd': t_on+arange(0.0,duration,1/params['f_in'])*second-Dt['ltp'],
-                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])*second}
-    spikes_post ={'ltd': t_on+arange(0.0,duration,1/params['f_in'])*second,
-                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])*second+Dt['ltd']}
+    spikes_pre = {'ltd': t_on+arange(0.0,duration,1/params['f_in'])-Dt['ltp'],
+                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])}
+    spikes_post ={'ltd': t_on+arange(0.0,duration,1/params['f_in']),
+                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])+Dt['ltd']}
 
     # # # Debug
     # Dt = {'ltd': 25*ms}
@@ -3116,7 +3012,7 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
 
     if sim:
         S_mon, N_mon, P_mon, G_mon = {}, {}, {}, {}
-        for k,v in Dt.iteritems():
+        for k,v in Dt.items():
             # Generate model
             source_group,target_group,synapses,gliot,es_astro2syn = asmod.openloop_model(params, N_syn=N_syn, N_astro=N_astro,
                                                                                          dt=dt_solv,
@@ -3130,7 +3026,7 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
 
             # Initialize other variables
             synapses.Csic = Csic
-            gliot.f_c = 1/duration  # dummy value to assure that you have only one relerase w/in the simulation
+            gliot.f_c = 1/duration  # dummy value to assure that you have only one release w/in the simulation
             gliot.v_A = 1. - params['f_c']*t_glt
 
             # The modulation by gliotransmitter must be initialized and start before the protocol
@@ -3149,10 +3045,10 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
             G_mon[k] = bu.monitor_to_dict(G, monitor_type='spike', fields=['spk'])
 
         # Save data
-        svu.savedata([S_mon, N_mon, P_mon, G_mon], 'stdp_sic_mechanism.pkl')
+        svu.savedata([S_mon, N_mon, P_mon, G_mon], data_dir+'stdp_sic_mechanism.pkl')
 
     # Load data
-    [S, N, P, G] = svu.loaddata('stdp_sic_mechanism.pkl')
+    [S, N, P, G] = svu.loaddata(data_dir+'stdp_sic_mechanism.pkl')
 
     # # Plotting options
     colors = {'ltd' : '#003366', 'ltp': '#FF0066'}
@@ -3162,7 +3058,7 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
     # tLTP protocol
     plot_stdp_sic(S['ltp'], N['ltp'], P['ltp'], G['ltp'], Csic, params, N_syn=N_syn, N_astro=N_astro, color=colors['ltp'])
     #
-    # Save figures
+    # Save Figures
     protocol = ['ltd','ltp']
     label = ['nosic','sic']
     for i,n in enumerate(plt.get_fignums()):
@@ -3171,11 +3067,11 @@ def stdp_sic_mechanism(sim=False, format='eps', dir='./'):
             p = protocol[0]
         else:
             p = protocol[1]
-        plt.savefig(dir+'fig6_'+p+'_'+label[i%2]+'.'+format, format=format, dpi=600)
+        plt.savefig(fig_dir+'fig6_'+p+'_'+label[i%2]+'.'+format, format=format, dpi=600)
 
     plt.show()
 
-def concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag='stdp'):
+def concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag='stdp', data_dir='../data/'):
     """
     Extract solutions from different data sets, lump and save them in a single list. Currently used to suitably handle
     simulations that regard the timing of SICs w.r.t. pairs.
@@ -3193,7 +3089,9 @@ def concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag
 
     cad,cap,dW = [],[],[]
     for _,dset in enumerate(dataset):
-        [C, W, dt_gliot, dt_syn, N] = svu.loaddata(filestamp+dset+'.pkl')
+        [C, W, dt_gliot, dt_syn, N] = svu.loaddata(data_dir+filestamp+dset+'.pkl')
+        dt_gliot = np.asarray(dt_gliot)
+        dt_syn = np.asarray(dt_syn)
         thd,thp,dw = compute_stdp_curves(dt_syn, C, W, params, duration, N_sim=N[1], mean_field=True)
         if mode=='sic':
             index = (dt_syn>=dt/second).nonzero()[0][0]
@@ -3206,12 +3104,12 @@ def concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag
             cap.append(thp[index])
             dW.append(dw[index])
 
-    print shape(cad),shape(cap),shape(dw)
+    print(shape(cad),shape(cap),shape(dw))
 
     # Save final data
-    svu.savedata([cad,cap,dW,dt_gliot,dt_syn], 'stdp_sic_curves_timing_'+lbl+'_tau_sic_all_'+tag+'.pkl')
+    svu.savedata([cad,cap,dW,dt_gliot,dt_syn], data_dir+'stdp_sic_curves_timing_'+lbl+'_tau_sic_all_'+tag+'.pkl')
 
-def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, N_pts=50, stdp='nonlinear'):
+def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, N_pts=50, stdp='nonlinear', data_dir='../data/'):
     if stdp=='linear':
         # File label
         lbl = 'lin'
@@ -3256,7 +3154,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     W_mon =bu.monitor_to_dict(W)
 
     # Save data
-    svu.savedata([C_mon, W_mon, dt, f_c/Hz, ns(1, N_astro, N_pts)], 'stdp_sic_curves_fc_'+lbl+'.pkl')
+    svu.savedata([C_mon, W_mon, dt, f_c/Hz, ns(1, N_astro, N_pts)], data_dir+'stdp_sic_curves_fc_'+lbl+'.pkl')
 
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /2 : show SICs effect on synaptic plasticity for three different values of Csic
@@ -3292,7 +3190,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     # You will need to slice data as [::N_astro]
 
     # Save data
-    svu.savedata([C_mon, W_mon, dt, Csic, ns(N_syn, 1, N_pts)], 'stdp_sic_curves_Csic'+lbl+'.pkl')
+    svu.savedata([C_mon, W_mon, dt, Csic, ns(N_syn, 1, N_pts)], data_dir+'stdp_sic_curves_Csic_'+lbl+'.pkl')
 
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /3 : show SICs effect on synaptic plasticity for different values of \Delta\varsigma
@@ -3324,7 +3222,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     # Initialize
     # Gliotransmission
     gliot.f_c = params['f_c']
-    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in xrange(N_astro)])
+    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in range(N_astro)])
     # SIC
     synapses.Csic = params['Cpre']
     # Neural firing
@@ -3342,7 +3240,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     W_mon =bu.monitor_to_dict(W)
 
     # Save data
-    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], 'stdp_sic_curves_timing_'+lbl+'.pkl')
+    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], data_dir+'stdp_sic_curves_timing_'+lbl+'.pkl')
 
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /4 : show SICs effect on synaptic plasticity for different values of \Delta\varsigma w/ longer SIC rise
@@ -3361,7 +3259,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     # Initialize
     # Gliotransmission
     gliot.f_c = params['f_c']
-    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in xrange(N_astro)])
+    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in range(N_astro)])
     # SIC
     synapses.Csic = params['Cpre']
     # Neural firing
@@ -3379,7 +3277,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     W_mon =bu.monitor_to_dict(W)
 
     # Save data
-    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], 'stdp_sic_curves_timing_'+lbl+'_tau_sic_r.pkl')
+    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], data_dir+'stdp_sic_curves_timing_'+lbl+'_tau_sic_r.pkl')
 
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /5 : show SICs effect on synaptic plasticity for different values of \Delta\varsigma w/ longer SIC rise
@@ -3399,7 +3297,7 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     # Initialize
     # Gliotransmission
     gliot.f_c = params['f_c']
-    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in xrange(N_astro)])
+    gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in range(N_astro)])
     # SIC
     synapses.Csic = params['Cpre']
     # Neural firing
@@ -3417,70 +3315,17 @@ def stdp_curves_sic_sim(params, Dt_min, Dt, duration=61*second, dt_solv=0.1*ms, 
     W_mon =bu.monitor_to_dict(W)
 
     # Save data
-    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], 'stdp_sic_curves_timing_'+lbl+'_tau_sic.pkl')
+    svu.savedata([C_mon, W_mon, dt_gliot, dt_syn, ns(1,N_astro,N_pts)], data_dir+'stdp_sic_curves_timing_'+lbl+'_tau_sic.pkl')
 
     #---------------------------------------------------------------------------------------------------------------
     # Build Data from Simulations 4 and 5
     #---------------------------------------------------------------------------------------------------------------
     # The computation of the dw and Ca2+ time fractions are based on the same model parameters that are not touched
-    concatenate_sim_timing(params, duration, lbl, mode='sic', dt=-50*ms, tag='ltd')
-    concatenate_sim_timing(params, duration, lbl, mode='sic', dt=60*ms, tag='ltp')
-    concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag='stdp')
+    concatenate_sim_timing(params, duration, lbl, mode='sic', dt=-50*ms, tag='ltd', data_dir=data_dir)
+    concatenate_sim_timing(params, duration, lbl, mode='sic', dt=60*ms, tag='ltp', data_dir=data_dir)
+    concatenate_sim_timing(params, duration, lbl, mode='default', dt=-75*ms, tag='stdp', data_dir=data_dir)
 
-    # #---------------------------------------------------------------------------------------------------------------
-    # # Simulation /3 (OBSOLETE) : LTD and LTP at selected Dt for different SIC-pair delays
-    # #---------------------------------------------------------------------------------------------------------------
-    # params['f_in'] = 1.*Hz
-    # params['f_c'] = 0.5*Hz
-    # Csic = params['Cpre']*array([1.0])
-    # N_astro = N_pts
-    # # Prepare simulation parameters
-    # dt = {'ltd' : -25.*ms,
-    #       'ltp' : +25.*ms}
-    # # dt = {'ltd' : -25.*ms}
-    # Dt_min_gliot = -500.*ms
-    # Dt_gliot = abs(Dt_min_gliot)*2.
-    # dt_gliot = arange(Dt_min_gliot, Dt_min_gliot+Dt_gliot, Dt_gliot/N_astro)
-    # # Build model
-    # C_mon = {}
-    # # x = [int( (Dt_min_gliot + i/N_astro * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/N_astro * Dt_gliot) for i in xrange(N_astro)]
-    # for k in dt.keys():
-    #     source_group,target_group,synapses,gliot,es_astro2syn = asmod.openloop_model(params,
-    #                                                                                  dt=dt_solv,
-    #                                                                                  N_pts=1, N_syn=1, N_astro=N_pts,
-    #                                                                                  linear=True,
-    #                                                                                  connect='i==j',
-    #                                                                                  stdp='nonlinear',
-    #                                                                                  sic='double-exp',
-    #                                                                                  stdp_protocol='fixed-pairs')
-    #     # Initialize
-    #     # Gliotransmission
-    #     gliot.f_c = params['f_c']
-    #     gliot.v_A = array([int( (Dt_min_gliot + i/float(N_astro) * Dt_gliot)<0*second ) + params['f_c']*( Dt_min_gliot + i/float(N_astro) * Dt_gliot) for i in xrange(N_astro)])
-    #     # SIC
-    #     synapses.Csic = params['Cpre']
-    #     # Neural firing
-    #     source_group.f_in = params['f_in']
-    #     target_group.f_in = params['f_in']
-    #     if k=='ltd':
-    #         source_group.v = 1.+params['f_in']*dt[k]
-    #         target_group.v = 1.
-    #     else:
-    #         source_group.v = 1.
-    #         target_group.v = 1.-params['f_in']*dt[k]
-    #
-    #     # Monitors
-    #     C = StateMonitor(synapses, variables=['C_syn'], record=True, dt=1*ms, when='before_thresholds')
-    #
-    #     # Run
-    #     run(duration,namespace={},report='text')
-    #
-    #     # Transform to dictionary
-    #     C_mon[k] = bu.monitor_to_dict(C)
-    # # Save data
-    # svu.savedata([C_mon, dt_gliot, ns(1,N_pts,1)], 'stdp_sic_curves_timing_'+lbl+'.pkl')
-
-def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
+def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', data_dir='../data/', fig_dir='../Figures/'):
 
     params = asmod.get_parameters(synapse='neutral',stdp=stdp)
     if stdp=='linear':
@@ -3519,7 +3364,7 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     duration =  61*second
 
     if sim:
-        stdp_curves_sic_sim(params, Dt_min, Dt, duration=duration, dt_solv=0.1*ms, N_pts=N_pts, stdp='nonlinear')
+        stdp_curves_sic_sim(params, Dt_min, Dt, duration=duration, dt_solv=0.1*ms, N_pts=N_pts, stdp='nonlinear', data_dir=data_dir)
 
     # #---------------------------------------------------------------------------------------------------------------
     # # Plot results
@@ -3539,7 +3384,7 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     # ---------------------------------------------------------------------------------------------------------------
     # Simulation /1 / f_c
     # ---------------------------------------------------------------------------------------------------------------
-    [C, W, dt, f_c, N] = svu.loaddata('stdp_sic_curves_fc_'+lbl+'.pkl')
+    [C, W, dt, f_c, N] = svu.loaddata(data_dir+'stdp_sic_curves_fc_'+lbl+'.pkl')
 
     N_astro = N[1]
     # Plot results
@@ -3590,7 +3435,7 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     # ---------------------------------------------------------------------------------------------------------------
     # Simulation /2 / Csic
     # ---------------------------------------------------------------------------------------------------------------
-    [C, W, dt, Csic, N] = svu.loaddata('stdp_sic_curves_Csic_'+lbl+'.pkl')
+    [C, W, dt, Csic, N] = svu.loaddata(data_dir+'stdp_sic_curves_Csic_'+lbl+'.pkl')
 
     N_syn = N[0]
     # Plot results
@@ -3652,14 +3497,14 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
                  fontsize=legfs, frameon=False, loc=4)
 
     #-------------------------------------------------------------------------------------------------------------------
-    # Save figures
+    # Save Figures
     #-------------------------------------------------------------------------------------------------------------------
-    save_figures(label=dir+'fig6_stdp_sic_',filename=['fc','Csic'], format=format, dpi=600)
+    save_figures(label=fig_dir+'fig6_stdp_sic_',filename=['fc','Csic'], format=format, dpi=600)
 
     # # ---------------------------------------------------------------------------------------------------------------
     # # Simulation /3 / Timing
     # # ---------------------------------------------------------------------------------------------------------------
-    [C, W, dt_gliot, dt_syn, N] = svu.loaddata('stdp_sic_curves_timing_'+lbl+'.pkl')
+    [C, W, dt_gliot, dt_syn, N] = svu.loaddata(data_dir+'stdp_sic_curves_timing_'+lbl+'.pkl')
 
     # Extract data
     N_astro = N[1]
@@ -3766,7 +3611,8 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     label = ['ca_d','ca_p','w']
     for i,n in enumerate(plt.get_fignums()):
         figure(n)
-        plt.savefig(dir+'fig6_'+label[i]+'.'+'png', format='png', dpi=1200)
+        if i < 3:
+            plt.savefig(fig_dir+'fig6_'+label[i]+'.'+'png', format='png', dpi=1200)
 
     # # ---------------------------------------------------------------------------------------------------------------
     # # Simulation /4,5 / Different SIC time constants
@@ -3783,14 +3629,14 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     colors = ['y']
     colors.extend(ctau)
     # Load data
-    [cad, cap, dw, _, dt] = svu.loaddata(filespec+'_'+lbl[0]+'.pkl')
+    [cad, cap, dw, _, dt] = svu.loaddata(data_dir+filespec+'_'+lbl[0]+'.pkl')
     # Rescale data
     dt /= 1.e-3
     # Plot
     _, ax = figtem.generate_figure('2x1', figsize=(4.5,6.0), left=0.2, right=0.05, bottom=0.12, top=0.05, vs=[0.05])
     ax[1].plot((dt[0], dt[-1]), (0.0,0.0), c=color0, ls='-', lw=lw[0])
     ax[1].plot((0.0, 0.0), (-60,60), c=color0, ls='-', lw=lw[0])
-    for i in xrange(shape(cad)[0]):
+    for i in range(shape(cad)[0]):
         ax[0].plot(dt, cad[i]*100., ls='-', color=colors[i], lw=lw[1])
         ax[0].plot(dt, cap[i]*100., ls='--', color=colors[i], lw=lw[1])
         ax[1].plot(dt, dw[i], ls='-', color=colors[i], lw=lw[1], marker='o')
@@ -3842,14 +3688,14 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     colors = [chex((23,190,207))]
     colors.extend(ctau)
     # Load data
-    [cad, cap, dw, dt, _] = svu.loaddata(filespec+'_'+lbl[1]+'.pkl')
+    [cad, cap, dw, dt, _] = svu.loaddata(data_dir+filespec+'_'+lbl[1]+'.pkl')
     # Rescale data
     dt /= 1.e-3
     # Plot
     _, ax = figtem.generate_figure('2x1', figsize=(4.5,6.0), left=0.2, right=0.05, bottom=0.12, top=0.05, vs=[0.05])
     ax[1].plot((dt[0], dt[-1]), (0.0,0.0), c=color0, ls='-', lw=lw[0])
     ax[1].plot((0.0, 0.0), (-60,60), c=color0, ls='-', lw=lw[0])
-    for i in xrange(shape(cad)[0]):
+    for i in range(shape(cad)[0]):
         ax[0].plot(dt, cad[i]*100., ls='-', color=colors[i], lw=lw[1])
         ax[0].plot(dt, cap[i]*100., ls='--', color=colors[i], lw=lw[1])
         ax[1].plot(dt, dw[i], ls='-', color=colors[i], lw=lw[1], marker='o')
@@ -3887,14 +3733,14 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
     colors = [chex((123,102,210))]
     colors.extend(ctau)
     # Load data
-    [cad, cap, dw, dt, _] = svu.loaddata(filespec+'_'+lbl[2]+'.pkl')
+    [cad, cap, dw, dt, _] = svu.loaddata(data_dir+filespec+'_'+lbl[2]+'.pkl')
     # Rescale data
     dt /= 1.e-3
     # Plot
     _, ax = figtem.generate_figure('2x1', figsize=(4.5,6.0), left=0.2, right=0.05, bottom=0.12, top=0.05, vs=[0.05])
     ax[1].plot((dt[0], dt[-1]), (0.0,0.0), c=color0, ls='-', lw=lw[0])
     ax[1].plot((0.0, 0.0), (-60,60), c=color0, ls='-', lw=lw[0])
-    for i in xrange(shape(cad)[0]):
+    for i in range(shape(cad)[0]):
         ax[0].plot(dt, cad[i]*100., ls='-', color=colors[i], lw=lw[1])
         ax[0].plot(dt, cap[i]*100., ls='--', color=colors[i], lw=lw[1])
         ax[1].plot(dt, dw[i], ls='-', color=colors[i], lw=lw[1], marker='o')
@@ -3929,187 +3775,21 @@ def stdp_sic_curves(sim=False, stdp='nonlinear', format='eps', dir='./'):
 
     for i,n in enumerate(plt.get_fignums()):
         figure(n)
-        plt.savefig(dir+'fig6_tau_sic_'+lbl[i]+'.'+format, format=format, dpi=600)
-
-    # #-------------------------------------------------------------------------------------------------------------------
-    # # Simulation /3 (OBSOLETE): LTD and LTP for fixed Dt as a function of timing of SIC
-    # #-------------------------------------------------------------------------------------------------------------------
-    # ---------------------------------------------------------------------------------------------------------------
-    # Simulation /3 / Timing
-    # ---------------------------------------------------------------------------------------------------------------
-    # [C, dt_gliot, N] = svu.loaddata('stdp_sic_curves_timing_'+lbl+'.pkl')
-    #
-    # # LTD
-    # _, ax = figtem.generate_figure('2x1', figsize=(6.0,6.0), left=0.16, right=0.1, bottom=0.12, top=0.05, vs=[0.05])
-    # ax = plot_stdp_curves(dt_gliot/1e-3, C['ltd'], [], params, duration, N_sim=1, mean_field=True,
-    #                       ax=ax, color=[colors['ltd']])
-    #
-    # # Adjust axes
-    # xlims = (-500,500.1)
-    # xticks = arange(xlims[0],xlims[1],250)
-    # ylims = (0.0,5.0)
-    # yticks = arange(0.0,5.01,2.0)
-    # figtem.adjust_spines(ax[0], ['left'], position=spine_position)
-    # ax[0].set_xlim(xlims)
-    # ax[0].set_ylim(ylims)
-    # ax[0].set_yticks(yticks)
-    # ax[0].set_ylabel('% Time above thr.', fontsize=lfs)
-    # ax[0].yaxis.set_label_coords(-.14,0.5)
-    # # Adjust labels
-    # set_axlw(ax[0], lw=alw)
-    # set_axfs(ax[0], fs=afs)
-    #
-    # ylims = (-55,5.0)
-    # figtem.adjust_spines(ax[1], ['left', 'bottom'], position=spine_position)
-    # ax[1].set_xlim(xlims)
-    # ax[1].set_xticks(xticks)
-    # ax[1].set_xlabel('SIC-pair Delay (${0}$)'.format(sympy.latex(ms)), fontsize=lfs)
-    # ax[1].set_ylim(ylims)
-    # ax[1].set_yticks(arange(-50,5.,10.))
-    # ax[1].set_ylabel(r'%$\Delta$ Syn. Strength', fontsize=lfs)
-    # ax[1].yaxis.set_label_coords(-.14,0.5)
-    # # Adjust labels
-    # set_axlw(ax[1], lw=alw)
-    # set_axfs(ax[1], fs=afs)
-    #
-    # # LTP
-    # _, ax = figtem.generate_figure('2x1', figsize=(6.0,6.0), left=0.16, right=0.1, bottom=0.12, top=0.05, vs=[0.05])
-    # ax = plot_stdp_curves(dt_gliot/1e-3, C['ltp'], [], params, duration, N_sim=1, mean_field=True,
-    #                       ax=ax, color=[colors['ltp']])
-    #
-    # # Adjust axes
-    # xlims = (-500,500.1)
-    # xticks = arange(xlims[0],xlims[1],250)
-    # ylims = (2.0,6.0)
-    # yticks = arange(2.0,6.01,2.0)
-    # figtem.adjust_spines(ax[0], ['left'], position=spine_position)
-    # ax[0].set_xlim(xlims)
-    # ax[0].set_ylim(ylims)
-    # ax[0].set_yticks(yticks)
-    # ax[0].set_ylabel('% Time above thr.', fontsize=lfs)
-    # ax[0].yaxis.set_label_coords(-.14,0.5)
-    # # Adjust labels
-    # set_axlw(ax[0], lw=alw)
-    # set_axfs(ax[0], fs=afs)
-    #
-    # ylims = (-5,50.)
-    # figtem.adjust_spines(ax[1], ['left', 'bottom'], position=spine_position)
-    # ax[1].set_xlim(xlims)
-    # ax[1].set_xticks(xticks)
-    # ax[1].set_xlabel('SIC-pair Delay (${0}$)'.format(sympy.latex(ms)), fontsize=lfs)
-    # ax[1].set_ylim(ylims)
-    # ax[1].set_yticks(arange(0.,50.01,10.))
-    # ax[1].set_ylabel(r'%$\Delta$ Syn. Strength', fontsize=lfs)
-    # ax[1].yaxis.set_label_coords(-.14,0.5)
-    # # Adjust labels
-    # set_axlw(ax[1], lw=alw)
-    # set_axfs(ax[1], fs=afs)
-
-    # #-------------------------------------------------------------------------------------------------------------------
-    # # Save figures
-    # #-------------------------------------------------------------------------------------------------------------------
-    # save_figures(label=dir+'fig6_stdp_sic_',filename=['fc','Csic','time-ltd','time-ltp'], format=format, dpi=600)
+        if i < 3:
+            plt.savefig(fig_dir+'fig6_tau_sic_'+lbl[i]+'.'+format, format=format, dpi=600)
 
     plt.show()
 
-# def stdp_sic(sim=True, format='svg', dir='../Figures/'):
-def stdp_sic(sim=False, format='svg', dir='../Figures/'):
-    # stdp_sic_mechanism(sim=sim, format=format, dir=dir)
-    stdp_sic_curves(sim=sim, format=format, dir=dir)
+def stdp_sic(sim=True, format='svg', fig_dir='../Figures/'):
+# def stdp_sic(sim=False, format='svg', fig_dir='../Figures/'):
+    stdp_sic_mechanism(sim=sim, format=format, fig_dir=fig_dir)
+    stdp_sic_curves(sim=sim, format=format, fig_dir=fig_dir)
 
 if __name__ == '__main__':
-    # simulate('io')
+    simulate('io')
     simulate('stp')
-    # simulate('filter')
-    # simulate('sic')
-    # simulate('stdp_pre')
-    # simulate('stdp_sic')
+    simulate('filter')
+    simulate('sic')
+    simulate('stdp_pre')
+    simulate('stdp_sic')
     # print profiling_summary()
-
-
-    # # #---------------------------------------------------------------------------------------------------------------
-    # # # Simulation /3
-    # # #---------------------------------------------------------------------------------------------------------------
-    # [W, dt, f_c, Csic, ns] = svu.loaddata('stdp_sic_curves_fc_Csic.pkl')
-    #
-    # # Retrieve useful simulation parameters
-    # N_syn = ns[0]
-    # N_astro = ns[1]
-    #
-    # # Compute curve parameters
-    # thr, wmin, wmax, aratio, _ = stdp_curve_parameters(dt/1e-3, W, N_syn*N_astro, params)
-    #
-    # # Plot results
-    # _, ax = figtem.generate_figure('2x1', figsize=(5.5,6.0), left=0.15, right=0.15, bottom=0.12, top=0.05, vs=[0.03])
-    #
-    # # Define some lambdas
-    # reshape_as_img = lambda x, N_syn, N_astro : reshape([x[i::N_astro] for i in xrange(N_syn)],(N_syn,N_astro))
-    #
-    # # Reshape data for image-like plotting
-    # gmax = 0.12 # Needs to be obtained by ad-hoc simulation or from previous values
-    # # Use Csic rescaled in Cpre units
-    # C, F = meshgrid(gmax*Csic/params['Cpre'], f_c)
-    # THR = reshape_as_img(thr,N_syn,N_astro)
-    # AR = reshape_as_img(aratio,N_syn,N_astro)
-    #
-    # # Plot Threshold crossing
-    # xlims = [0.01,1]
-    # xticks = [0.01,0.05,0.1,0.5,1]
-    # ylims = [0,0.5]
-    # yticks = arange(0,0.61,0.1)
-    # # Colorbar values
-    # vlims = [-12,0.0]
-    # vticks = arange(-12,0.1,4)
-    #
-    # # Effective plotting
-    # p = ax[0].pcolormesh(F,C,THR, cmap='RdBu', shading='gouraud', vmin=vlims[0], vmax=vlims[1])
-    # figtem.adjust_spines(ax[0], ['left'], position=spine_position)
-    # ax[0].set_xlim(xlims)
-    # ax[0].set_xscale('log')
-    # ax[0].set_xticks([])
-    # ax[0].set_ylim(ylims)
-    # ax[0].set_yticks(yticks)
-    # ax[0].set_ylabel('SIC (x$C_{pre}$)', fontsize=lfs)
-    # ax[0].yaxis.set_tick_params(labelsize=afs)
-    # # Add colorbar
-    # cbar = plt.colorbar(p, ax=ax[0], ticks=vticks)
-    # cbar.ax.set_ylabel('$\Delta t_\\theta$ (${0}$)'.format(sympy.latex(ms)), fontsize=lfs)
-    # cbar.ax.yaxis.set_tick_params(labelsize=afs)
-    # # Adjust labels
-    # set_axlw(ax[0], lw=alw)
-    # set_axfs(ax[0], fs=afs)
-    # set_axlw(cbar.ax, lw=alw)
-    # set_axfs(cbar.ax, fs=afs)
-    #
-    # # Plot Area ratio
-    # # Colorbar settings
-    # vlims = [0.15,0.75]
-    # vticks = arange(0.15,0.751,0.15)
-    #
-    # # Effective plotting
-    # p = ax[1].pcolormesh(F,C,AR, cmap='RdBu', shading='gouraud', vmin=vlims[0], vmax=vlims[1])
-    # figtem.adjust_spines(ax[1], ['left','bottom'], position=spine_position)
-    # ax[1].set_xlim(xlims)
-    # ax[1].set_xscale('log')
-    # ax[1].set_xticks(xticks)
-    # ax[1].set_xticklabels([str(xt) for xt in xticks])
-    # ax[1].set_ylim(ylims)
-    # ax[1].set_yticks(yticks)
-    # ax[1].set_xlabel(r'$\nu_c$ (${0}$)'.format(sympy.latex(Hz)), fontsize=lfs)
-    # ax[1].set_ylabel('SIC (x$C_{pre}$)', fontsize=lfs)
-    # ax[1].xaxis.set_tick_params(labelsize=afs)
-    # ax[1].yaxis.set_tick_params(labelsize=afs)
-    # # Add colorbar
-    # cbar = plt.colorbar(p, ax=ax[1], ticks=vticks)
-    # cbar.ax.set_ylabel('Area Ratio', fontsize=lfs)
-    # cbar.ax.yaxis.set_tick_params(labelsize=afs)
-    # # Adjust labels
-    # set_axlw(ax[1], lw=alw)
-    # set_axfs(ax[1], fs=afs)
-    # set_axlw(cbar.ax, lw=alw)
-    # set_axfs(cbar.ax, fs=afs)
-    #
-    # #-------------------------------------------------------------------------------------------------------------------
-    # # Save figures
-    # #-------------------------------------------------------------------------------------------------------------------
-    # save_figures(label='fig6_stdp_sic_',filename=['fc','Csic','curves'], format=format, dpi=600)

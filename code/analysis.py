@@ -1,15 +1,17 @@
 """
 analysis.py
 
-Methods for analysis of results and building simulation-specific figures.
+Methods for analysis of results and building simulation-specific Figures.
 - Plotting of astrocyte signal
 - Bifurcation diagrams
 - Plotting of released resources and synaptic I/O characteristics
-- Pseudo-fluorescence figures for Ca2+ signal propagation in astrocyte networks
-"""
+- Pseudo-fluorescence Figures for Ca2+ signal propagation in astrocyte networks
 
-# TODO: Possibly add also dt as input arguments to astro_with_syn module and similar to allow control of integration step
-# TODO: Add decimal labelling in the case of log scale for plot_bifurcation_diagrams
+v2.0 Maurizio De Pitta, Basque Center for Mathematics, 2020
+Translated and Debugged to run in Python 3.x
+
+v1.0 Maurizio De Pitta, The University of Chicago, 2015
+"""
 
 from brian2 import *
 from brian2.units.allunits import mole, umole, mmole
@@ -20,13 +22,6 @@ from scipy.signal import convolve2d
 # User-defined modules
 import astrocyte_models as asmod
 import figures_template as figtem
-
-
-# Temporary modules
-import os, sys
-sys.path.append(os.path.join(os.path.expanduser('~'),'Dropbox/Ongoing.Projects/pycustommodules'))
-import brian_utils as bu
-import save_utils as svu
 
 import matplotlib.patches as ptc
 
@@ -135,19 +130,19 @@ def build_bifdiag(astro_group,N_trials,params,
         # Step of variation for the bifurcation parameter
         bifpar_step = 0.1*diff(bifpar_range)[0]/N_points
         # Compute value of bifpar for each object in the astro_group
-        bifpar_vals = array([10**(bifpar_range[0]+ bifpar_step + diff(bifpar_range)[0]*double(i%N_points)/N_points) for i in xrange(N_points)])
+        bifpar_vals = array([10**(bifpar_range[0]+ bifpar_step + diff(bifpar_range)[0]*double(i%N_points)/N_points) for i in range(N_points)])
     else:
         # Step of variation for the bifurcation parameter
         bifpar_step = 0.1*diff(bifpar_range)[0]/N_points
         # Compute value of bifpar for each object in the astro_group
-        bifpar_vals = array([bifpar_range[0]+bifpar_step+diff(bifpar_range)[0]*double(i%N_points)/N_points for i in xrange(N_points)])
+        bifpar_vals = array([bifpar_range[0]+bifpar_step+diff(bifpar_range)[0]*double(i%N_points)/N_points for i in range(N_points)])
     # Set bifpar values
     bifpar_vals = tile(tile(bifpar_vals,(1,N_trials)),(1,N_syn))[0]
     setattr(bifpar_group, bifpar_name, bifpar_vals*bifpar_units)
 
     # Run preliminary simulation to get initial conditions possibly close to stable states or oscillations
     # The preliminary run is taken 1/3 of the full duration
-    print "Computing Initial Conditions"
+    print("Computing Initial Conditions")
     run(duration/3, namespace={}, report='text')
 
     # Forward continuation
@@ -155,7 +150,7 @@ def build_bifdiag(astro_group,N_trials,params,
         setattr(bifpar_group, bifpar_name, 10**(log10(bifpar_vals)+bifpar_step)*bifpar_units)
     else:
         setattr(bifpar_group, bifpar_name, (bifpar_vals+bifpar_step)*bifpar_units)
-    print "Running continuation"
+    print("Running continuation")
     # Will drop the first 'transient' seconds
     run(transient, namespace={}, report='text')
 
@@ -277,7 +272,7 @@ def build_uxsyn(t, ux_solution, tau, var='x'):
     nval = nval[argsort(ispk)]
     ispk = ispk[argsort(ispk)]
     tspk = []
-    for i in xrange(len(ispk)) : tspk.extend(repeat(ispk[i],nval[i]))
+    for i in range(len(ispk)) : tspk.extend(repeat(ispk[i],nval[i]))
     dt = t-t[tspk]
 
     if var=='x':
@@ -405,8 +400,8 @@ def rr_mean(params, N_points=1, N_trials=1, freq_range=[0.1,100], gliot=False,
 
     # Functions to compute mean and std of released resources
     r_vals = lambda r : [mean(unique(x[x>0])) for x in r]                # mean unique r_S per trial
-    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in xrange(npts)] # mean r_S per freq value
-    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in xrange(npts)]  # std on r_S per freq value
+    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in range(npts)] # mean r_S per freq value
+    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in range(npts)]  # std on r_S per freq value
 
     # if sim:
     # Build synaptic model (w/out gliotransmission)
@@ -425,7 +420,7 @@ def rr_mean(params, N_points=1, N_trials=1, freq_range=[0.1,100], gliot=False,
     # Step of variation for the bifurcation parameter
     freq_step = 0.1*diff(freq_range)[0]/N_points
     # Compute value of bifpar for each object in the astro_group
-    freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in xrange(N_points)])
+    freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in range(N_points)])
     freq_vals = tile(freq_vals,(1,N_trials))[0]
     setattr(neuron_in,'f_in',freq_vals*Hz)
 
@@ -434,12 +429,6 @@ def rr_mean(params, N_points=1, N_trials=1, freq_range=[0.1,100], gliot=False,
 
     # Run simulation
     run(duration, namespace={}, report='text')
-
-    # # Save data
-    # svu.savedata([bu.monitor_to_dict(mon)],filename)
-
-    # Load data
-    # mon = svu.loaddata(filename)[0]
 
     R = {}
     R['U_0'] = r_vals(mon.U_0_[:])
@@ -494,8 +483,8 @@ def synaptic_filter(params, N_points=1, N_trials=1, freq_range=[0.1,100], gliot=
 
     # Functions to compute mean and std of released resources
     r_vals = lambda r : [mean(unique(x[x>0])) for x in r]                # mean unique r_S per trial
-    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in xrange(npts)] # mean r_S per freq value
-    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in xrange(npts)]  # std on r_S per freq value
+    r_mean = lambda rv, npts : [mean(rv[i::npts]) for i in range(npts)] # mean r_S per freq value
+    r_std  = lambda rv, npts : [std(rv[i::npts]) for i in range(npts)]  # std on r_S per freq value
 
     if sim:
         # Build synaptic model (w/out gliotransmission)
@@ -511,7 +500,7 @@ def synaptic_filter(params, N_points=1, N_trials=1, freq_range=[0.1,100], gliot=
         # Step of variation for the bifurcation parameter
         freq_step = 0.1*diff(freq_range)[0]/N_points
         # Compute value of bifpar for each object in the astro_group
-        freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in xrange(N_points)])
+        freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in range(N_points)])
         freq_vals = tile(freq_vals,(1,N_trials))[0]
         setattr(neuron_in,'f_in',freq_vals*Hz)
 
@@ -553,8 +542,8 @@ def freq_out(params, sim=True, gliot=False, sync='double-exp', duration=30*secon
     '''
 
     # Functions to compute mean and std of released resources
-    v_mean = lambda v, npts : [mean(v[i::npts]) for i in xrange(npts)] # mean r_S per freq value
-    v_std  = lambda v, npts : [std(v[i::npts]) for i in xrange(npts)]  # std on r_S per freq value
+    v_mean = lambda v, npts : [mean(v[i::npts]) for i in range(npts)] # mean r_S per freq value
+    v_std  = lambda v, npts : [std(v[i::npts]) for i in range(npts)]  # std on r_S per freq value
 
 
     if sim :
@@ -579,7 +568,7 @@ def freq_out(params, sim=True, gliot=False, sync='double-exp', duration=30*secon
         # Step of variation for the bifurcation parameter
         freq_step = 0.1*diff(freq_range)[0]/N_points
         # Compute value of bifpar for each object in the gliotransmission group
-        freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in xrange(N_points)])
+        freq_vals = array([10**(freq_range[0]+ freq_step + diff(freq_range)[0]*double(i%N_points)/N_points) for i in range(N_points)])
         freq_vals = tile(freq_vals,(1,N_trials))[0]
         if not gliot :
             setattr(neuron_in,'f_in',freq_vals*Hz)
@@ -641,7 +630,7 @@ def time_above_threshold(time,signal,thresholds={'Theta_d': 0.0, 'Theta_p': 0.1}
     - Average time above the thresholds (dictionary)
     '''
     tat = {}
-    for thr in threhsolds.keys():
+    for thr in list(threhsolds.keys()):
         index = signal>=thr
         if sum(index)>0:
             if index[-1]: index[-1] = False
@@ -669,20 +658,20 @@ def threshold_regions(time, signal, theta_d, theta_p,
     # patches = []
     if sum(idxd)>0:
         index = where(diff(idxd))[0]
-        for i in xrange(0,size(index),2):
+        for i in range(0,size(index),2):
             xpts = concatenate(([time[index[i]]], time[index[i]:index[i+1]], [time[index[i+1]]]))
             ypts = concatenate(([y0], signal[index[i]:index[i+1]], [y0]))
             # patches.append(ptc.Polygon(zip(*vstack((xpts,ypts))), True, ec='none', fc=colors['ltd']))
-            ax.add_artist(ptc.Polygon(zip(*vstack((xpts,ypts))), True, ec='none', fc=colors['ltd']))
+            ax.add_artist(ptc.Polygon(list(zip(*vstack((xpts,ypts)))), True, ec='none', fc=colors['ltd']))
             # patches.append(ptc.Polygon(vstack((xpts,ypts)), ec='none', fc=colors['ltd']))
 
     if sum(idxp)>0:
         index = where(diff(idxp))[0]
-        for i in xrange(0,size(index),2):
+        for i in range(0,size(index),2):
             xpts = concatenate(([time[index[i]]], time[index[i]:index[i+1]], [time[index[i+1]]]))
             ypts = concatenate(([y0], signal[index[i]:index[i+1]], [y0]))
             # patches.append(ptc.Polygon(zip(*vstack((xpts,ypts))), True, ec='none', fc=colors['ltp']))
-            ax.add_artist(ptc.Polygon(zip(*vstack((xpts,ypts))), True, ec='none', fc=colors['ltp']))
+            ax.add_artist(ptc.Polygon(list(zip(*vstack((xpts,ypts)))), True, ec='none', fc=colors['ltp']))
 
     # if size(patches)>0: ax.add_collection(PatchCollection(patches))
 
@@ -726,7 +715,7 @@ def plot_connections(model_group=None,connections=None,
         # Add the nodes as a scatter
         # TODO: currently nodes are not opaque but edges cross them: I don't know how to set matplotlib to have nice plotting...
         node_trace = plt.scatter(x=[], y=[], c=color, s=markersize, marker='o', facecolor='none', edgecolor=color)
-        for node in xrange(size(model_group.x)):
+        for node in range(size(model_group.x)):
             x, y = model_group.x_[node], model_group.y_[node]
             node_trace.set_offsets(append(node_trace.get_offsets(),[x,y]))
     else:
@@ -738,7 +727,7 @@ def plot_connections(model_group=None,connections=None,
         # Add the nodes as a scatter
         # TODO: currently nodes are not opaque but edges cross them: I don't know how to set matplotlib to have nice plotting...
         node_trace = ax.scatter(x=[], y=[], c=color, s=markersize, marker='o', facecolor='none', edgecolor=color)
-        for node in xrange(size(x_coords)):
+        for node in range(size(x_coords)):
             x, y = x_coords[node], y_coords[node]
             node_trace.set_offsets(append(node_trace.get_offsets(),[x,y]))
 
@@ -769,7 +758,7 @@ def plot_traces(t,signals,var_name):
 
     # Labelling and Refine
     ax.set_yticks(ticklocs)
-    ax.set_yticklabels(['${0}$'.format(var_name)+'%d'%(i+1) for i in xrange(shape(signals)[0])])
+    ax.set_yticklabels(['${0}$'.format(var_name)+'%d'%(i+1) for i in range(shape(signals)[0])])
     ax.set_ylim([-0.1,shape(signals)[0]+0.6])
     ax.set_xlabel('Time (s)')
 
@@ -820,7 +809,7 @@ def plot_pseudo_df_f(t,signals,
     N_pixels = 100
     time_step = 3
 
-    # If time_samples for extraction of images are not specified it automatically gives the 0,1/step,...,end figures
+    # If time_samples for extraction of images are not specified it automatically gives the 0,1/step,...,end Figures
     if time_samples is None:
         t_index = append(arange(0,size(t),size(t)/time_step,dtype=int),-1)
     else:
@@ -842,7 +831,7 @@ def plot_pseudo_df_f(t,signals,
     if img_size is not None:
         img_size /= meter
         if img_size<=x_size:
-            print "img_size is <= max coordinate and will be ignored"
+            print("img_size is <= max coordinate and will be ignored")
         else:
             x_size = img_size
             y_size = img_size
@@ -909,19 +898,3 @@ def plot_raster(t_spk, i_n, N_e=1, ax=None, c_e='k', c_i='r'):
     ax.plot(t_spk[~idx], i_n[~idx], '.', color=c_i)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Neuron index')
-
-
-
-# For testing purposes
-# Comment once finalized
-if __name__ == '__main__':
-    # # 'Ring' network testing
-    # t,C,I,x_coords,y_coords,connections_i,connections_j = svu.loaddata('tmp_ring.pkl')
-    # plot_pseudo_df_f(t,C,x_coords,y_coords,connections_i,connections_j,
-    #                  time_samples=arange(0,61,15),img_size=800*umeter)
-    # # 'Stochastic lattice' testing
-    # t,C,I,x_coords,y_coords,connections_i,connections_j = svu.loaddata('tmp_lattice.pkl')
-    # plot_pseudo_df_f(t,C,x_coords,y_coords,connections_i,connections_j,
-    #                  connect='lattice_stoch',time_samples=arange(0,61,15),img_size=650*umeter)
-    plt.show()
-    # pass

@@ -1,13 +1,11 @@
 """
 figures_template.py
 
-Provides axis grids and figure templates to build complex figures for publication.
+Provides axis grids and figure templates to build complex Figures for publication.
 """
 
 from numpy import *
 from scipy import *
-import sys
-# sys.path.append(r'/home/maurizio/Documents/PyCustomModules')
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -29,7 +27,7 @@ def varargin(pars,**kwargs):
     - pars     : modified dictionary of parameters to be used inside the calling
                  (parent) function
     """
-    for key,val in kwargs.iteritems():
+    for key,val in kwargs.items():
         if key in pars:
             pars[key] = val
     return pars
@@ -60,7 +58,7 @@ def adjust_spines(ax, spines, position=0, smart_bounds=False):
     position : Integer
      Number of points for position of axis
     """
-    for loc, spine in ax.spines.items():
+    for loc, spine in list(ax.spines.items()):
         if loc in spines:
             spine.set_position(('outward', position))  # outward by 10 points
             spine.set_smart_bounds(smart_bounds)
@@ -113,13 +111,13 @@ def make_patch_spines_invisible(ax):
     '''
     ax.set_frame_on(True)
     ax.patch.set_visible(False)
-    for sp in ax.spines.itervalues():
+    for sp in ax.spines.values():
         sp.set_visible(False)
 
 def freeze_canvas(opts, AxisWidth, AxisHeight):
     '''
     Resize axis to ref_size (keeping left and bottom margins fixed)
-    Useful to plot figures in a larger or smaller figure box but with canvas of the same canvas
+    Useful to plot Figures in a larger or smaller figure box but with canvas of the same canvas
 
     Inputs :
 
@@ -137,7 +135,7 @@ def freeze_canvas(opts, AxisWidth, AxisHeight):
         # Compute size differences
         dw = (opts['axref_size'][0]-opts['figsize'][0])/opts['figsize'][0]
         dh = (opts['axref_size'][1]-opts['figsize'][1])/opts['figsize'][1]
-        for k,v in opts.iteritems():
+        for k,v in opts.items():
             if k=='left' or k=='hs' : opts[k] = resize(v,dw)
             if k=='bottom' or k=='vs' : opts[k] = resize(v,dh)
         AxisWidth = resize(AxisWidth,dw)
@@ -165,7 +163,7 @@ def generate_figure(template, **kwargs):
         return figure_4x1_1L3S(**kwargs)
     if template=='5x1_4S1L':
         return figure_5x1_4S1L(**kwargs)
-    # Horizontally-developed figures
+    # Horizontally-developed Figures
     if template=='1x3':
         return figure_1x3(**kwargs)
 
@@ -214,7 +212,7 @@ def figure_1x1(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -273,7 +271,7 @@ def figure_2x1(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -336,7 +334,7 @@ def figure_2x1_custom(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -407,7 +405,7 @@ def figure_2x1_1L2S(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -468,7 +466,7 @@ def figure_3x1(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -527,7 +525,7 @@ def figure_4x1(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -596,7 +594,7 @@ def figure_4x1_1L3S(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
@@ -661,14 +659,14 @@ def figure_5x1_4S1L(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]-1,-1,-1):
+    for i in range(shape(axBoxes)[0]-1,-1,-1):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 
     return fig, ax
 
 #-----------------------------------------------------------------------------------------------------------------------
-# Horizontally-developing figures
+# Horizontally-developing Figures
 #-----------------------------------------------------------------------------------------------------------------------
 def figure_1x3(**kwargs):
     '''
@@ -726,7 +724,7 @@ def figure_1x3(**kwargs):
     fig = plt.figure(fignum(), figsize=opts['figsize'])
 
     ax = list()
-    for i in xrange(shape(axBoxes)[0]):
+    for i in range(shape(axBoxes)[0]):
         ax_aux = fig.add_axes(axBoxes[i])
         ax.append(ax_aux)
 

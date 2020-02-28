@@ -8,7 +8,7 @@ def choseParameterSet(plasticityCase):
         #
         global tauCa, Cpre, Cpost, thetaP, thetaD, gammaP, gammaD, sigma, tau, rhoStar, D, beta, b
         if plasticityCase == 'DP':
-                print 'DP'
+                print('DP')
                 tauCa = 0.02 # in sec
                 Cpre = 1.
                 Cpost = 2.
@@ -23,7 +23,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'DPD':
-                print 'DPD'
+                print('DPD')
                 tauCa = 0.02 # in sec
                 Cpre = 0.9
                 Cpost = 0.9
@@ -38,7 +38,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'DPDprime':
-                print 'DPDprime'
+                print('DPDprime')
                 tauCa = 0.02 # in sec
                 Cpre = 1.
                 Cpost = 2.
@@ -53,7 +53,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'P':
-                print 'P'
+                print('P')
                 tauCa = 0.02 # in sec
                 Cpre = 2.
                 Cpost = 2.
@@ -68,7 +68,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'D':
-                print 'D'
+                print('D')
                 tauCa = 0.02 # in sec
                 Cpre = 0.6
                 Cpost = 0.6
@@ -83,7 +83,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'Dprime':
-                print 'Dprime'
+                print('Dprime')
                 tauCa = 0.02 # in sec
                 Cpre = 1.
                 Cpost = 2.
@@ -98,7 +98,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.
         elif plasticityCase == 'hippocampal slices':
-                print 'hippocampal slices'
+                print('hippocampal slices')
                 tauCa = 0.0488373 # in sec
                 Cpre = 1.
                 Cpost = 0.275865
@@ -113,7 +113,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.7
                 b       = 5.28145
         elif plasticityCase == 'hippocampal cultures':
-                print 'hippocampal cultures'
+                print('hippocampal cultures')
                 tauCa = 0.0119536 # in sec
                 Cpre = 0.58156
                 Cpost = 1.76444
@@ -128,7 +128,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 36.0263
         elif plasticityCase == 'cortical slices':
-                print 'cortical slices'
+                print('cortical slices')
                 tauCa = 0.0226936 # in sec
                 Cpre = 0.5617539
                 Cpost = 1.23964
@@ -143,7 +143,7 @@ def choseParameterSet(plasticityCase):
                 beta    = 0.5
                 b       = 5.40988
         else:
-                print 'Choose from one of the available parameter sets!'
+                print('Choose from one of the available parameter sets!')
                 sys.exit(1)
 
 
