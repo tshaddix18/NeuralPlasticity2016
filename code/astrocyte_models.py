@@ -15,7 +15,7 @@ v1.0 Maurizio De Pitta, The University of Chicago, 2015
 
 from brian2 import *
 from brian2.units.allunits import mole, umole, mmole
-
+import os
 # Define some global lambdas
 peak_normalize = lambda peak, taur, taud : peak*(1./taud - 1./taur)/Hz/( (taur/taud)**(taud/(taud-taur))-(taur/taud)**(taur/(taud-taur)) )
 

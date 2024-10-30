@@ -12,9 +12,13 @@ v1.0 Maurizio De Pitta, The University of Chicago, 2015
 """
 from brian2 import *
 from brian2.units.allunits import mole, umole, mmole
-
+import logging
+logging.basicConfig(level=logging.DEBUG)
 import scipy.signal as sg
+from math import sqrt
 
+import os
+import numpy as np
 # Optional settings for faster compilations and execution by Brian
 prefs.codegen.cpp.extra_compile_args = ['-Ofast', '-march=native']
 
@@ -25,8 +29,8 @@ import figures_template as figtem
 import graupner_model as camod
 import brian_utils as bu
 import save_utils as svu
-
-import geometry as geom
+from svg_converter import svg_to_png
+import Geometry as geom
 import sympy
 
 import numpy.random as random
@@ -35,8 +39,43 @@ import matplotlib.patches as mpatches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.interpolate import UnivariateSpline
 
+matplotlib.use('Agg') 
+
 #LECTURE
 from scipy.signal import argrelmax
+import numpy as np
+
+
+import numpy as np
+
+def interx(l, l0):
+    """
+    Find approximate intersection points of two curves provided as 2D arrays.
+    
+    Parameters:
+    l, l0: 2D arrays where the first row represents x-values and the second row represents y-values.
+
+    Returns:
+    intersections: A list of (x, y) tuples representing intersection points, or [(np.nan, np.nan)] if none are found.
+    """
+    # Separate x and y values for each input
+    x1, y1 = l[0], l[1]
+    x2, y2 = l0[0], l0[1]
+
+    # Ensure all arrays are 1D
+    x1, x2, y1, y2 = np.ravel(x1), np.ravel(x2), np.ravel(y1), np.ravel(y2)
+    
+    # Interpolate y-values for x1 on the second curve
+    y2_interp = np.interp(x1, x2, y2)
+
+    # Find where y1 and y2 intersect by checking for sign changes
+    idx = np.argwhere(np.diff(np.sign(y1 - y2_interp))).flatten()
+
+    # Collect intersection points or return [(np.nan, np.nan)] if none found
+    intersections = [(x1[i], y1[i]) for i in idx]
+    return intersections if intersections else [(np.nan, np.nan)]
+
+
 
 def save_figures(label='tmp', filename=['figure'], format='svg', dpi=600):
     '''
@@ -47,7 +86,11 @@ def save_figures(label='tmp', filename=['figure'], format='svg', dpi=600):
     :param dpi:
     :return:
     '''
-    for i,n in enumerate(plt.get_fignums()):
+
+    if filename is None:
+        filename = [f'figure_{i}' for i in range(len(plt.get_fignums()))]
+    
+    for i, n in enumerate(plt.get_fignums()):
         figure(n)
         plt.savefig(label+filename[i]+'.'+format, format=format, dpi=dpi)
 
@@ -1762,7 +1805,11 @@ def plot_stdp(S, P, alpha, params, color='k'):
 
         # Plot Cpre
         r, ispk = unique(S['r_S'][i], return_index=True)
-        l, m, b = ax[0].stem(S['t'][ispk], r/r0, linefmt='k', markerfmt='', basefmt='')
+        if np.ndim(P['t'][i]) == 0:  # Check if it's a scalar
+            l, m, b = ax[1].stem(P['t'][0], ones((1, 1)), linefmt='k', markerfmt='', basefmt='')  # Use 1 instead of len()
+        else:
+            l, m, b = ax[1].stem(P['t'][0], ones((len(P['t'][i]), 1)), linefmt='k', markerfmt='', basefmt='')
+
         plt.setp(m, 'linewidth', opts['lw'])
         plt.setp(l, 'linestyle', 'none')
         plt.setp(b, 'linestyle', 'none')
@@ -1801,7 +1848,10 @@ def plot_stdp(S, P, alpha, params, color='k'):
         # Top plot / 2
         #-------------------------------------------------------------------------------------------------------------------
         # Cpost
-        l, m, b = ax[1].stem(P['t'][0], ones((len(P['t'][i]),1)), linefmt='k', markerfmt='', basefmt='')
+        if np.ndim(P['t'][i]) == 0:  # Scalar case
+            l, m, b = ax[1].stem(P['t'][0], np.ones((1, 1)), linefmt='k', markerfmt='', basefmt='')  # Use 1 instead of len()
+        else:  # Array case
+            l, m, b = ax[1].stem(P['t'][0], np.ones((len(P['t'][i]), 1)), linefmt='k', markerfmt='', basefmt='')
         plt.setp(m, 'linewidth', opts['lw'])
         plt.setp(l, 'linestyle', 'none')
         plt.setp(b, 'linestyle', 'none')
@@ -1887,15 +1937,27 @@ def stdp_mechanism(sim=False, format='eps', data_dir='../data/', fig_dir='../Fig
     alpha = [params['U_0__star'], 0.0, 1.0]
     t_on = 0.2*second
     # Dt = {'ltp': -30*ms, 'ltd': 30*ms}
-    Dt = {'ltp': -25*ms, 'ltd': 25*ms}
+    Dt = {'ltp': 25*ms, 'ltd': 25*ms}
+    Dt['ltp'] = -25 * ms
+
     t_glt = t_on-0.1*second
     duration =  0.8*second
+    #t_on = t_on.rescale(second)  # Ensure t_on is in seconds
+   # Dt['ltp'] = Dt['ltp'].rescale(second)  # Ensure Dt['ltp'] is in seconds
+    #Dt['ltd'] = Dt['ltd'].rescale(second)  # Ensure Dt['ltd'] is in seconds
+    print(f"Dt['ltp']: {Dt['ltp']}, units: {Dt['ltp'].dim}")
+    #Dt['ltp'] = sqrt(abs(Dt['ltp'])) * ms  # Ensure Dt['ltp'] is in milliseconds
+    print(f"Dt['ltp']: {Dt['ltp']}, units: {Dt['ltp'].dim}")
+
+
+
 
     # Build stimulation protocol
-    spikes_pre = {'ltd': t_on+arange(0.0,duration,1/params['f_in'])*second-Dt['ltp'],
-                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])*second}
-    spikes_post ={'ltd': t_on+arange(0.0,duration,1/params['f_in'])*second,
-                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])*second+Dt['ltd']}
+    spikes_pre = {'ltd': t_on + arange(0.0, duration, 1/params['f_in']) - Dt['ltp'],
+                'ltp': t_on + arange(0.0, duration, 1/params['f_in'])}
+
+    spikes_post ={'ltd': t_on+arange(0.0,duration,1/params['f_in']),
+                  'ltp': t_on+arange(0.0,duration,1/params['f_in'])+Dt['ltd']}
 
     # Dt = {'ltd': 25*ms}
     # spikes_pre = {'ltd': t_on+arange(0.0,duration,1/params['f_in'])*second-Dt['ltd']}
@@ -2171,7 +2233,9 @@ def stdp_curve_parameters(dt, C, N_sim, params, duration=61*second):
         l = vstack((dt.take(indices),stdp_curve[i].take(indices)))
         l0 = vstack((dt.take(indices),[0,0]))
         # Find intersection
-        thr.append(geom.interx(l,l0)[0][0])
+        result = interx(l, l0)
+        if result[0][0] is not np.nan:
+            thr.append(result[0][0])
         # Max and Min
         wmin.append(abs(amin(stdp_curve[i])))
         wmax.append(amax(stdp_curve[i]))
@@ -2182,10 +2246,12 @@ def stdp_curve_parameters(dt, C, N_sim, params, duration=61*second):
             indices = (indices[0]-1,indices[0])
             l = vstack((dt.take(indices),stdp_curve[i].take(indices)))
             l0 = vstack((dt.take(indices[:2]),[0,0]))
-            thr2.append(geom.interx(l,l0)[0][0])
-            # aratio.append(abs(sum(stdp_curve.take(((dt>=thr[i])&(dt<=thr2[i])).nonzero()))/(sum(stdp_curve.take((dt<=thr[i]).nonzero()))+sum(stdp_curve.take((dt>=thr2[i]).nonzero())))))
-            # Assumes that the curve in this case is of DPD type
-            aratio.append(0)
+            result = interx(l, l0)
+            if result[0][0] is not np.nan:
+                thr2.append(result[0][0])
+                aratio.append(abs(sum(stdp_curve[i].take((dt>=thr[i]).nonzero())) / sum(stdp_curve[i].take((dt<=thr[i]).nonzero()))))
+            else:
+                aratio.append(0)  # Or handle this case in another way if necessary
         else:
             thr2.append(Inf)
             aratio.append(abs(sum(stdp_curve[i].take((dt>=thr[i]).nonzero()))/sum(stdp_curve[i].take((dt<=thr[i]).nonzero()))))
@@ -2198,6 +2264,7 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second,
     '''
     Show effect of short-term plasticity on STDP curves
     '''
+    print(f"Function stdp_curves_stp called with gliot={gliot} and stdp={stdp}")
 
     # Define some lambdas
     ns = lambda Nsyn, Nastro, Npts  : [Nsyn,Nastro,Npts]
@@ -2219,7 +2286,10 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second,
     C_mon = []
     W_mon = []
 
+    print(" got to  stdp_curves_stp glio is", gliot)
     if not gliot:
+
+        print("Running simulation without gliot.")
         for i,_ in enumerate(U_0__star):
             # No gliotransmitter modulation
             params['U_0__star'] = U_0__star[i]
@@ -2247,13 +2317,23 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second,
             # Convert monitors to dictionaries
             C_mon.append(bu.monitor_to_dict(C))
             W_mon.append(bu.monitor_to_dict(W))
-
+       # logging.debug(f"Saving data for 'nonlin' with U_0__star: {U_0__star}")
+       # logging.debug(f"C_mon length: {len(C_mon)} | W_mon length: {len(W_mon)} | dt shape: {dt.shape} | ns: {ns(1, 1, N_pts)}")
         # Save data
-        svu.savedata([C_mon, W_mon, dt, U_0__star, ns(1,1,N_pts)], data_dir+'stdp_curves_0_'+lbl+'.pkl')
+            try:
+                svu.savedata([C_mon, W_mon, dt, U_0__star, ns(1,1,N_pts)], data_dir+'stdp_curves_0_'+lbl+'.pkl')
+                print("Data saved successfully")
+            except Exception as e:
+                    print(f"Error while saving data: {e}")
+
+        #print("Data saved successfully. Exiting...")
+        
+
     else:
     #---------------------------------------------------------------------------------------------------------------
     # Simulation /2 : show effect of gliotransmission modulation on synaptic plasticity
     #---------------------------------------------------------------------------------------------------------------
+        print("Running simulation with gliot.")
         params['U_0__star'] = U_0__star[0]
         alpha = [params['U_0__star'], 0.0, 1.0]
         N_syn = size(alpha)
@@ -2282,9 +2362,14 @@ def stdp_curves_stp(params, Dt_min, Dt, duration=61*second,
         C_mon = bu.monitor_to_dict(C)
         W_mon = bu.monitor_to_dict(W)
         # You will need to slice data as [::N_astro]
-
+        logging.debug(f"Saving data for 'gliot' with alpha: {alpha}")
+        #logging.debug(f"C_mon length: {len(C_mon)} | W_mon length: {len(W_mon)} | dt shape: {dt.shape} | ns: {ns(N_syn, 1, N_pts)}")
+        
         # Save data
         svu.savedata([C_mon, W_mon, dt, alpha, ns(N_syn,1,N_pts)], data_dir+'stdp_curves_glt_'+lbl+'.pkl')
+        filename = data_dir + 'stdp_curves_0_' + lbl + '.pkl'
+       # raise SystemExit("Cutting the code early after saving the data.")
+
 
 def stdp_curves_parameters_sim_pre(params, Dt_min, Dt, dt_solv, N_pts, N_syn, stdp='nonlinear', data_dir='../data/'):
     '''
@@ -2305,8 +2390,11 @@ def stdp_curves_parameters_sim_pre(params, Dt_min, Dt, dt_solv, N_pts, N_syn, st
     # Extend range of simulation wrt above (needed to compute finer areas under curve)
     dt = arange(Dt_min, Dt_min+Dt, Dt/N_pts)
     # Data sets
-    alpha = concatenate((linspace(0.0, params['U_0__star']*(1-1.0/N_syn), N_syn/2),
-                         linspace(params['U_0__star'], 1.0, N_syn/2)))
+    alpha = concatenate((
+        linspace(0.0, params['U_0__star'] * (1 - 1.0 / N_syn), int(np.round(N_syn / 2))),
+        linspace(params['U_0__star'], 1.0, int(np.round(N_syn / 2)))
+    ))
+    
 
     source_group,target_group,synapses,gliot,es_astro2syn = asmod.openloop_model(params,
                                                                                  dt=dt_solv,
@@ -2375,21 +2463,24 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', data_dir='../data/', 
     Dt_min = -100*ms
     dt_step = 0.1*ms
     N_pts = 100
-
+    print("the sim value is ",sim)
     if sim:
         #---------------------------------------------------------------------------------------------------------------
         # Simulations /1: Show effect of short-term plasticity on STDP curves w/out
         #---------------------------------------------------------------------------------------------------------------
+        print("made it to sim 1")
         stdp_curves_stp(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, N_pts=N_pts,
                         duration=duration, dt_solv=dt_step, stdp=stdp, gliot=False, data_dir=data_dir)
         # ---------------------------------------------------------------------------------------------------------------
         # Simulations /2: Show effect of short-term plasticity on STDP curves w/ gliotransmission
         # ---------------------------------------------------------------------------------------------------------------
+        print("made it to sim 2")
         stdp_curves_stp(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, N_pts=N_pts,
                         duration=duration, dt_solv=dt_step, stdp=stdp, gliot=True, data_dir=data_dir)
         # ---------------------------------------------------------------------------------------------------------------
         # Simulation /3 : show effect of gliotransmission for finer xi on threshold and peaks / areas of different plasticity
         #---------------------------------------------------------------------------------------------------------------
+        print("made it to sim 3")
         stdp_curves_parameters_sim_pre(params, Dt_min=Dt_min, Dt=abs(Dt_min)*2, dt_solv=dt_step, N_pts=200, N_syn=50, data_dir=data_dir)
 
     #---------------------------------------------------------------------------------------------------------------
@@ -2542,7 +2633,10 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', data_dir='../data/', 
     thr, wmin, wmax, aratio, thr2 = stdp_curve_parameters(dt/second, C, size(alpha), params)
 
     # Define some lambdas for post-processing
-    altthr = lambda thr, xi : (thr<Inf)&(xi>params['U_0__star'])
+    thr_expanded = np.tile(thr, (len(alpha), 1)).T if thr.ndim == 1 else thr
+    altthr = lambda thr, alpha: (thr_expanded < np.inf) & (alpha > params['U_0__star'])
+
+
 
     # Plot results
     _, ax = figtem.generate_figure('2x1', figsize=(7.0,8.0), left=0.18, right=0.1, bottom=0.08, top=0.02, vs=[0.03])
@@ -2561,10 +2655,31 @@ def stdp_curves(sim=False, stdp='nonlinear', format='eps', data_dir='../data/', 
     xlim = [0.0,1.01]
     ylim = [-3.0,1.7]
     transparency = 0.4
+    print("Alpha:", alpha.shape)
+    print("Indices or Mask:", altthr(thr2, alpha))
+
     # Add patches
     ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[0],xlim[0]],ylim+ylim[::-1])))), ec='none', fc=color['depressing'],alpha=transparency))
     ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([params['U_0__star'],params['U_0__star'],xlim[-1],xlim[-1]],ylim+ylim[::-1])))), ec='none', fc=color['facilitating'], alpha=transparency))
-    ax[0].add_artist(mpatches.Polygon(list(zip(*vstack(([alpha[altthr(thr2,alpha)][0],alpha[altthr(thr2,alpha)][0],xlim[-1],xlim[-1]],[ylim[0],1.1*ylim[-1],1.1*ylim[-1],ylim[0]])))), ec='k', ls='dotted', fill=False, hatch='/'))
+    
+    ax[0].add_artist(
+        mpatches.Polygon(
+            list(
+                zip(
+                    *vstack(
+                        (
+                            [alpha[altthr(thr2, alpha)], alpha[altthr(thr2, alpha)], xlim[-1], xlim[-1]],
+                            [ylim[0], 1.1 * ylim[-1], 1.1 * ylim[-1], ylim[0]],
+                        )
+                    )
+                )
+            )
+        ),
+        ec='k',
+        ls='dotted',
+        fill=False,
+        hatch='/'
+    )
 
     # Zero crossing
     ax[0].plot(xlim, [0.0,0.0], ls='-', c=color['zero'], lw=lw[0])
@@ -2806,8 +2921,9 @@ def test_currents(post=True):
     # plt.show()
 
 # def stdp_pre(sim=True, format='eps', fig_dir='../Figures/'):
-def stdp_pre(sim=False, format='svg', fig_dir='../Figures/'):
-    # stdp_mechanism(sim=sim, format=format, dir=dir)
+def stdp_pre(sim=True, format='svg', fig_dir='../Figures/'):
+    stdp_mechanism(sim=sim, format=format, fig_dir=fig_dir)
+    print(f"sim: {sim}, format: {format}, fig_dir: {fig_dir}")
     stdp_curves(sim=sim, format=format, fig_dir=fig_dir)
 #     test_currents()
     plt.show()
@@ -3785,11 +3901,23 @@ def stdp_sic(sim=True, format='svg', fig_dir='../Figures/'):
     stdp_sic_mechanism(sim=sim, format=format, fig_dir=fig_dir)
     stdp_sic_curves(sim=sim, format=format, fig_dir=fig_dir)
 
+#input_folder = "/c/Users/tommy/OneDrive/Documents/GitHub/NeuralPlasticity2016/Figures"
+
+# Set the output folder (where you want to save PNG files)
+#output_folder = "/c/Users/tommy/OneDrive/Documents/GitHub/NeuralPlasticity2016/PNGFigures"
+
+# Call the function to convert SVG to PNG
+#svg_to_png(input_folder, output_folder)
 if __name__ == '__main__':
-    simulate('io')
-    simulate('stp')
-    simulate('filter')
+   # simulate('io')
+    #simulate('stp')
+    #simulate('filter')
     simulate('sic')
     simulate('stdp_pre')
     simulate('stdp_sic')
-    # print profiling_summary()
+    #svg_to_png(input_folder, output_folder)
+   # print profiling_summary()
+
+
+
+

@@ -61,7 +61,7 @@ def adjust_spines(ax, spines, position=0, smart_bounds=False):
     for loc, spine in list(ax.spines.items()):
         if loc in spines:
             spine.set_position(('outward', position))  # outward by 10 points
-            spine.set_smart_bounds(smart_bounds)
+           # spine.set_smart_bounds(smart_bounds)
         else:
             spine.set_color('none')  # don't draw spine
 
